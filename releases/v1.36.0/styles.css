@@ -4492,6 +4492,18 @@ a.bz-crumb:hover, button.bz-crumb:hover { color: var(--bz-text-1); }
   gap: 8px;
   margin-top: 16px;
 }
+/* 首设（.bz-lockscreen-row--stack）：两遍密码框上下排列、各占满一行——并排时每框只剩半宽，
+ * 明文也看不全自己输了什么。按钮自动落到最后一行：只有主按钮则独占整行，带次按钮则对半分。 */
+.bz-lockscreen-row--stack {
+  flex-wrap: wrap;
+}
+.bz-lockscreen-row--stack .bz-lockscreen-input {
+  flex: 1 1 100%;
+}
+.bz-lockscreen-row--stack .bz-lockscreen-action,
+.bz-lockscreen-row--stack .bz-lockscreen-cancel {
+  flex: 1 1 0;
+}
 .bz-lockscreen-input {
   flex: 1;
   min-width: 0;
@@ -4576,6 +4588,307 @@ a.bz-crumb:hover, button.bz-crumb:hover { color: var(--bz-text-1); }
   margin-top: 6px;
   font-size: var(--bz-font-caption);
   color: var(--ls-faint);
+}
+
+
+/* ═══════════ 首次设置主密码（三域共用：保险库 / 加密日记 / 密码本） ═══════════
+ * 与解锁屏分开：解锁各域各穿各的皮，首设是同一件事，故一套皮、不按域分。
+ * 皮与解锁屏（.bz-lockscreen，保险库缺省金印）同一语系：居中大徽 + 居中标题 +
+ * surface 输入框 + accent 整行主按钮 + 描边次按钮。变量名沿用 --su-*。
+ */
+.bz-su {
+  --su-accent: var(--interactive-accent, var(--bz-brand));
+  --su-accent-soft: var(--interactive-accent, var(--bz-brand));
+  /* 弹层挂 body，够不着域作用域 token —— 一律引宿主主题变量并写兜底链（同 .bz-lockscreen） */
+  --su-bg: var(--background-secondary, var(--background-primary, #1e1e1e));
+  --su-surface: var(--background-primary, var(--background-secondary, #262626));
+  --su-line: var(--background-modifier-border, rgba(255, 255, 255, 0.12));
+  --su-ink: var(--text-normal, #dadada);
+  --su-muted: var(--text-muted, #9a9aa5);
+  --su-faint: var(--text-faint, #5f5f6b);
+  --su-bad: var(--text-error, #e35d5d);
+  --su-ok: var(--color-green, #5db97a);
+  --su-warn: var(--color-orange, #d08b2c);
+}
+/* 全屏遮罩实例（挂 body；层级由显示路径 topifyZ 一次性发号，样式源不留静态 z 规则） */
+.bz-su--mask {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--bz-overlay, rgba(0, 0, 0, 0.45));
+  backdrop-filter: blur(var(--bz-overlay-blur));
+}
+/* 内联实例（密码本锁层：面板内覆盖，不另起遮罩） */
+.bz-su--inline {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bz-su-box {
+  width: 380px;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 30px 28px 24px;
+  border-radius: var(--bz-radius-lg);
+  background: var(--su-bg);
+  border: 1px solid var(--su-line);
+  box-shadow: var(--shadow-s, 0 10px 40px rgba(0, 0, 0, 0.45));
+  text-align: center;
+  animation: bz-su-in 0.16s ease both;
+}
+@keyframes bz-su-in {
+  from { opacity: 0; transform: translateY(4px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bz-su-box { animation: none; }
+}
+.bz-su--inline .bz-su-box {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+/* 头部：金印大徽居中压顶（同解锁屏 seal 语汇），标题副题随居中 */
+.bz-su-head {
+  display: block;
+}
+.bz-su-badge {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 14px;
+  border-radius: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--su-accent-soft);
+  color: #fff;
+}
+.bz-su-badge-ic {
+  width: 36px;
+  height: 36px;
+  display: flex;
+}
+.bz-su-badge-ic svg {
+  width: 36px;
+  height: 36px;
+}
+.bz-su-title {
+  margin: 0;
+  font-size: var(--bz-font-title);
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--su-ink);
+}
+.bz-su-sub {
+  margin: 4px 0 0;
+  font-size: var(--bz-font-meta);
+  line-height: 1.6;
+  color: var(--su-muted);
+}
+.bz-su-sub b {
+  color: var(--su-ink);
+  font-weight: 600;
+}
+/* 字段：表单区左对齐（可读性优先），框同解锁屏 input */
+.bz-su-field {
+  margin-top: 16px;
+  text-align: left;
+}
+.bz-su-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: var(--bz-font-caption);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--su-muted);
+}
+.bz-su-control {
+  position: relative;
+}
+.bz-su-input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 40px;
+  padding: 0 12px;
+  font-size: var(--bz-font-label);
+  color: var(--su-ink);
+  background: var(--su-surface);
+  border: 1px solid var(--su-line);
+  border-radius: var(--bz-radius-sm);
+  outline: none;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+}
+.bz-su-input::placeholder {
+  color: var(--su-faint);
+}
+.bz-su-input:focus {
+  border-color: var(--su-accent);
+}
+/* 第二框右侧留出状态位 */
+.bz-su-control .bz-su-input {
+  padding-right: 64px;
+}
+.bz-su-control.is-bad .bz-su-input {
+  border-color: var(--su-bad);
+}
+.bz-su-mark {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--bz-font-caption);
+  font-weight: 500;
+  opacity: 0;
+  transition: opacity 0.14s ease;
+  pointer-events: none;
+}
+.bz-su-mark.is-shown {
+  opacity: 1;
+}
+.bz-su-mark--ok {
+  color: var(--su-ok);
+}
+.bz-su-mark--bad {
+  color: var(--su-bad);
+}
+.bz-su-mark-ic {
+  width: 12px;
+  height: 12px;
+  display: flex;
+}
+.bz-su-mark-ic svg {
+  width: 12px;
+  height: 12px;
+}
+/* 风险告知：同解锁屏 warning 块（surface 底 + 描边），不抢戏 */
+.bz-su-warn {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 16px;
+  padding: 10px 12px;
+  border-radius: var(--bz-radius-sm);
+  background: var(--su-surface);
+  border: 1px solid var(--su-line);
+  text-align: left;
+}
+.bz-su-warn-ic {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 3px;
+  color: var(--su-warn);
+  display: flex;
+}
+.bz-su-warn-ic svg {
+  width: 14px;
+  height: 14px;
+}
+.bz-su-warn p {
+  margin: 0;
+  font-size: var(--bz-font-meta);
+  line-height: 1.7;
+  color: var(--su-muted);
+}
+.bz-su-warn p b {
+  color: var(--su-ink);
+  font-weight: 600;
+}
+/* 勾选 */
+.bz-su-ack {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: var(--bz-font-meta);
+  line-height: 1.6;
+  color: var(--su-muted);
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+}
+.bz-su-ack input {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin: 1px 0 0;
+  accent-color: var(--su-accent);
+  cursor: pointer;
+}
+.bz-su-ack.is-on {
+  color: var(--su-ink);
+}
+.bz-su-err {
+  min-height: 18px;
+  margin-top: 8px;
+  font-size: var(--bz-font-meta);
+  line-height: 1.4;
+  color: var(--su-bad);
+  text-align: left;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.bz-su-err.is-shown {
+  opacity: 1;
+}
+/* 主按钮整行——同解锁屏 action：accent 实底白字；次按钮同 cancel：描边幽灵钮。
+   特异性用 .bz-su button.*（0,2,1）：主题常用 .theme-light button（0,1,1）把按钮刷成 ghost，
+   单类压不住；accent 链再加一层字面保底，主题没给 --interactive-accent 时也不至于透明。 */
+.bz-su button.bz-su-go {
+  width: 100%;
+  height: 40px;
+  margin-top: 12px;
+  font-family: inherit;
+  font-size: var(--bz-font-label);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #fff;
+  background: var(--su-accent-soft, var(--bz-brand, #e2571c));
+  border: none;
+  border-radius: var(--bz-radius-sm);
+  cursor: pointer;
+  transition: opacity 0.14s ease;
+}
+@media (hover: hover) {
+  .bz-su button.bz-su-go:hover {
+    opacity: 0.92;
+  }
+}
+.bz-su button.bz-su-go:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.bz-su button.bz-su-later {
+  width: 100%;
+  height: 38px;
+  margin-top: 8px;
+  font-family: inherit;
+  font-size: var(--bz-font-label);
+  color: var(--su-muted);
+  background: transparent;
+  border: 1px solid var(--su-line);
+  border-radius: var(--bz-radius-sm);
+  cursor: pointer;
+  transition: color 0.14s ease, border-color 0.14s ease;
+}
+@media (hover: hover) {
+  .bz-su button.bz-su-later:hover {
+    color: var(--su-ink);
+    border-color: var(--su-ink);
+  }
+}
+.bz-su button.bz-su-later:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 
@@ -15330,9 +15643,10 @@ canvas { display: block; }
    守卫 :not(.bz-flow-dialog--danger)：危险主动作时 core 的 bz-flow-dialog--danger 把主钮
    降级成中性底 + 红字（设计手册 §9/§10 既定口径），域规则不得把它盖回金色 ——
    本条在危险态下直接不匹配，危险语义与配色原样保留。
-   本域两处确认框的分工（issue 291 评审补）：「设置主密码」是风险告知门、主动作是首设正向路径，
-   **不标 danger** → 走本条金色主钮；「仍要重设」是破坏性重设（旧数据永久不可恢复），**已标 danger**
-   → 本条不匹配、落到 core 中性档。issue 365 收编的删除类 askConfirm 同理走 danger 档（红字主钮）。 */
+   本域确认框的分工（issue 291 评审补）：「仍要重设」是破坏性重设（旧数据永久不可恢复），**已标 danger**
+   → 本条不匹配、落到 core 中性档。issue 365 收编的删除类 askConfirm 同理走 danger 档（红字主钮）。
+   首设的风险告知不再走流程框（收归三域共用的 setup-screen，告知与勾选在面板内一次说完），
+   故本条只剩「清单损坏重设」这一个非危险候选。 */
 #__shared_confirm_popup__.bz-pwv-flow-dialog:not(.bz-flow-dialog--danger) #__shared_confirm_ok__ {
   background: var(--pwv-gold-soft);
   color: #fff;
