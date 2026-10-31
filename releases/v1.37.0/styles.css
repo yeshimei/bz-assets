@@ -1086,7 +1086,7 @@ button.bz-flow-dialog-action.bz-flow-dialog-danger:not(.bz-flow-dialog-cta) {
   position: fixed;
   min-width: 180px; max-width: 320px;
   padding: var(--bz-space-xs);
-  /* 变量兜底链不是洁癖：评审壳只 mock 了 --background-primary，**没有 --background-secondary**
+  /* 变量兜底链不是洁癖：测试环境只 mock 了 --background-primary，**没有 --background-secondary**
      → 直接 var(--background-secondary) 解析失败 = 菜单透明（2026-09-11 用户实测报的 bug）。
      真机走主题值，壳回落主背景，再兜底纯白。 */
   background: var(--background-secondary, var(--background-primary, #fff));
@@ -1584,6 +1584,142 @@ button.bz-rowbtn--fail {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* ═══════════ 开发回放器（core/dev-flows.ts，仅测试库构建存在；正式用户不可达，样式随包无害）
+   原型稿 v2：磁带计数器底部条 + 命令面板式合集面板。全 token 语系，深浅主题自适应。 ═══════════ */
+.bz-dev-replay {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  /* 静态档只是兜底；真保顶靠 z-order 恒顶注册（registerAlwaysOnTop，随发号器自动抬顶） */
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 20px;
+  background: color-mix(in srgb, var(--bz-surface-1) 88%, transparent);
+  backdrop-filter: blur(var(--bz-overlay-blur));
+  border-top: 1px solid var(--bz-border);
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.14);
+  font-family: var(--bz-font-ui);
+  font-size: var(--bz-font-meta);
+  color: var(--bz-text-1);
+  user-select: none;
+}
+/* LCD 计数器：mono 内凹底；hover 浮出完整步骤清单（毛玻璃卡，脱离文档流） */
+.bz-dev-replay .counter { position: relative; font-family: Consolas, 'Cascadia Code', monospace; flex-shrink: 0; }
+.bz-dev-replay .lcd {
+  font-size: 15px; font-weight: 700; letter-spacing: 2px;
+  color: var(--interactive-accent);
+  background: color-mix(in srgb, var(--bz-surface-1) 72%, black);
+  border: 1px solid var(--bz-border); border-radius: 8px; padding: 5px 12px;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.25), 0 0 0 1px color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+}
+.bz-dev-replay .lcd small { color: var(--bz-text-3); font-size: 10px; letter-spacing: 1px; margin-right: 8px; }
+.bz-dev-replay .floater {
+  position: absolute; bottom: calc(100% + 10px); left: 0; display: none;
+  width: 340px; max-height: 280px; overflow: auto;
+  background: var(--bz-surface-2);
+  backdrop-filter: blur(var(--bz-overlay-blur));
+  border: 1px solid var(--bz-border-strong); border-radius: 12px;
+  box-shadow: var(--bz-shadow-lg, 0 16px 48px rgba(0, 0, 0, 0.3));
+  padding: 6px;
+}
+.bz-dev-replay .floater .fi {
+  display: flex; align-items: center; gap: 8px; padding: 6px 9px;
+  border-radius: 7px; font-size: 11.5px; font-family: var(--bz-font-ui); color: var(--bz-text-2);
+}
+.bz-dev-replay .floater .fi .n {
+  font-family: Consolas, monospace; font-size: 10px; width: 20px; text-align: center;
+  color: var(--bz-text-3); flex-shrink: 0;
+}
+.bz-dev-replay .floater .fi.on {
+  background: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+  color: var(--bz-text-1);
+}
+.bz-dev-replay .floater .fi.on .n { color: var(--interactive-accent); font-weight: 700; }
+.bz-dev-replay .floater .fi.done { color: var(--bz-text-3); }
+.bz-dev-replay .floater .fi.done .n { color: var(--color-green); }
+/* 分段胶带：每段弹性能缩（min 4px），步数再多只往横向挤、始终一条 4px 线 */
+.bz-dev-replay .tape { flex: 1; display: flex; gap: 5px; min-width: 0; align-items: center; padding: 4px 0; }
+.bz-dev-replay .seg {
+  flex: 1 1 0; min-width: 5px; height: 6px; border-radius: 3px;
+  background: var(--bz-border-strong); position: relative; overflow: hidden;
+}
+.bz-dev-replay .seg.done { background: color-mix(in srgb, var(--interactive-accent) 82%, transparent); }
+.bz-dev-replay .seg.cur { background: var(--bz-surface-3); box-shadow: 0 0 0 1px color-mix(in srgb, var(--interactive-accent) 45%, transparent); }
+.bz-dev-replay .seg.cur::after {
+  content: ''; position: absolute; inset: 0; transform-origin: left;
+  background: linear-gradient(90deg, var(--interactive-accent), color-mix(in srgb, var(--interactive-accent) 60%, white));
+  animation: bz-dev-seg-fill 1.5s linear infinite;
+}
+@keyframes bz-dev-seg-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+/* 当前步名单行省略 + 播放状态小字 */
+.bz-dev-replay .lbl {
+  flex: 0 1 auto; min-width: 180px; max-width: 40vw;
+  font-size: var(--bz-font-meta); color: var(--bz-text-1);
+  line-height: 1.45;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; word-break: break-all;
+}
+.bz-dev-replay .lbl small { display: block; font-size: 10px; color: var(--bz-text-3); font-weight: 400; }
+.bz-dev-replay .transport { display: flex; gap: 6px; flex-shrink: 0; margin-left: auto; }
+.bz-dev-replay .transport .bz-btn { width: 32px; height: 32px; padding: 0; justify-content: center; display: inline-flex; align-items: center; }
+.bz-dev-replay .transport .bz-btn--primary { box-shadow: 0 2px 10px color-mix(in srgb, var(--interactive-accent) 45%, transparent); }
+.bz-dev-replay .transport .bz-btn .svg-icon { --icon-size: 15px; }
+
+/* 合集面板（uiModal 皮）：命令面板式，按域折叠收纳 */
+.bz-dev-panel .search {
+  margin: 4px 0 10px; padding: 7px 12px;
+  background: var(--bz-surface-1); border: 1px solid var(--bz-border); border-radius: 10px;
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  font-size: var(--bz-font-meta); color: var(--bz-text-3);
+}
+.bz-dev-panel .bz-dev-panel-input {
+  flex: 1; background: transparent; border: none; outline: none;
+  color: var(--bz-text-1); font: inherit;
+}
+.bz-dev-panel .kbd {
+  font-family: Consolas, monospace; font-size: 10px; color: var(--bz-text-2);
+  border: 1px solid var(--bz-border); border-bottom-width: 2px; border-radius: 5px;
+  padding: 1px 6px; background: var(--bz-surface-3); margin-left: 4px;
+}
+.bz-dev-panel .grp-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 4px 6px; cursor: pointer; user-select: none;
+  font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: var(--bz-text-3);
+}
+.bz-dev-panel .grp-head .cnt {
+  font-family: Consolas, monospace; font-size: 10px; font-weight: 400; letter-spacing: 0;
+  background: var(--bz-surface-3); border-radius: 999px; padding: 1px 8px; color: var(--bz-text-2);
+}
+.bz-dev-panel .grp-head .chev { margin-left: auto; display: inline-flex; transition: transform 0.18s; }
+.bz-dev-panel .grp.closed .grp-head .chev { transform: rotate(-90deg); }
+.bz-dev-panel .grp.closed .grp-items { display: none; }
+.bz-dev-panel .pitem {
+  display: flex; align-items: center; gap: 12px; padding: 11px 6px;
+  cursor: pointer; transition: background 0.12s; border-radius: 8px;
+}
+.bz-dev-panel .pitem .num {
+  width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0;
+  background: var(--bz-surface-3); color: var(--bz-text-2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: Consolas, monospace; font-size: 11px;
+}
+.bz-dev-panel .pitem .t { font-weight: 600; }
+.bz-dev-panel .pitem .d { font-size: 11.5px; color: var(--bz-text-2); margin-top: 2px; }
+.bz-dev-panel .pitem .go { margin-left: auto; color: var(--bz-text-3); display: inline-flex; transition: transform 0.15s, color 0.15s; }
+.bz-dev-panel .pitem .go .svg-icon { --icon-size: 14px; }
+
+@media (hover: hover) {
+  .bz-dev-panel .grp-head:hover { color: var(--bz-text-2); }
+  .bz-dev-panel .pitem:hover { background: color-mix(in srgb, var(--interactive-accent) 8%, transparent); }
+  .bz-dev-panel .pitem:hover .num {
+    background: linear-gradient(135deg, var(--interactive-accent), color-mix(in srgb, var(--interactive-accent) 60%, white));
+    color: #fff;
+  }
+  .bz-dev-panel .pitem:hover .go { color: var(--interactive-accent); transform: translateX(3px); }
 }
 /* ============================================================
  * bz design tokens（自绘，不依赖 Obsidian 变量）
@@ -2133,6 +2269,15 @@ textarea.bz-input { height: auto; min-height: 80px; padding: 8px 10px; line-heig
 .bz-empty-title { font-size: var(--bz-font-body); font-weight: 600; color: var(--bz-text-2); }
 .bz-empty-desc { font-size: var(--bz-font-meta); color: var(--bz-text-3); max-width: 280px; }
 .bz-empty .bz-btn-row { margin-top: 12px; }
+/* 空态的补充提示（比 .bz-empty-desc 弱一档：说完「缺什么」再补一句「还要做什么」） */
+.bz-empty-note {
+  max-width: 300px;
+  margin: 2px 0 -4px;
+  font-size: var(--bz-font-meta);
+  line-height: 1.8;
+  color: var(--bz-text-3);
+  opacity: 0.9;
+}
 
 /* ═══════════ 分段 .bz-segmented ═══════════ */
 .bz-segmented {
@@ -4483,6 +4628,18 @@ a.bz-crumb:hover, button.bz-crumb:hover { color: var(--bz-text-1); }
   gap: 8px;
   margin-top: 16px;
 }
+/* 首设（.bz-lockscreen-row--stack）：两遍密码框上下排列、各占满一行——并排时每框只剩半宽，
+ * 明文也看不全自己输了什么。按钮自动落到最后一行：只有主按钮则独占整行，带次按钮则对半分。 */
+.bz-lockscreen-row--stack {
+  flex-wrap: wrap;
+}
+.bz-lockscreen-row--stack .bz-lockscreen-input {
+  flex: 1 1 100%;
+}
+.bz-lockscreen-row--stack .bz-lockscreen-action,
+.bz-lockscreen-row--stack .bz-lockscreen-cancel {
+  flex: 1 1 0;
+}
 .bz-lockscreen-input {
   flex: 1;
   min-width: 0;
@@ -4567,6 +4724,307 @@ a.bz-crumb:hover, button.bz-crumb:hover { color: var(--bz-text-1); }
   margin-top: 6px;
   font-size: var(--bz-font-caption);
   color: var(--ls-faint);
+}
+
+
+/* ═══════════ 首次设置主密码（三域共用：保险库 / 加密日记 / 密码本） ═══════════
+ * 与解锁屏分开：解锁各域各穿各的皮，首设是同一件事，故一套皮、不按域分。
+ * 皮与解锁屏（.bz-lockscreen，保险库缺省金印）同一语系：居中大徽 + 居中标题 +
+ * surface 输入框 + accent 整行主按钮 + 描边次按钮。变量名沿用 --su-*。
+ */
+.bz-su {
+  --su-accent: var(--interactive-accent, var(--bz-brand));
+  --su-accent-soft: var(--interactive-accent, var(--bz-brand));
+  /* 弹层挂 body，够不着域作用域 token —— 一律引宿主主题变量并写兜底链（同 .bz-lockscreen） */
+  --su-bg: var(--background-secondary, var(--background-primary, #1e1e1e));
+  --su-surface: var(--background-primary, var(--background-secondary, #262626));
+  --su-line: var(--background-modifier-border, rgba(255, 255, 255, 0.12));
+  --su-ink: var(--text-normal, #dadada);
+  --su-muted: var(--text-muted, #9a9aa5);
+  --su-faint: var(--text-faint, #5f5f6b);
+  --su-bad: var(--text-error, #e35d5d);
+  --su-ok: var(--color-green, #5db97a);
+  --su-warn: var(--color-orange, #d08b2c);
+}
+/* 全屏遮罩实例（挂 body；层级由显示路径 topifyZ 一次性发号，样式源不留静态 z 规则） */
+.bz-su--mask {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--bz-overlay, rgba(0, 0, 0, 0.45));
+  backdrop-filter: blur(var(--bz-overlay-blur));
+}
+/* 内联实例（密码本锁层：面板内覆盖，不另起遮罩） */
+.bz-su--inline {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bz-su-box {
+  width: 380px;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 30px 28px 24px;
+  border-radius: var(--bz-radius-lg);
+  background: var(--su-bg);
+  border: 1px solid var(--su-line);
+  box-shadow: var(--shadow-s, 0 10px 40px rgba(0, 0, 0, 0.45));
+  text-align: center;
+  animation: bz-su-in 0.16s ease both;
+}
+@keyframes bz-su-in {
+  from { opacity: 0; transform: translateY(4px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bz-su-box { animation: none; }
+}
+.bz-su--inline .bz-su-box {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+/* 头部：金印大徽居中压顶（同解锁屏 seal 语汇），标题副题随居中 */
+.bz-su-head {
+  display: block;
+}
+.bz-su-badge {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 14px;
+  border-radius: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--su-accent-soft);
+  color: #fff;
+}
+.bz-su-badge-ic {
+  width: 36px;
+  height: 36px;
+  display: flex;
+}
+.bz-su-badge-ic svg {
+  width: 36px;
+  height: 36px;
+}
+.bz-su-title {
+  margin: 0;
+  font-size: var(--bz-font-title);
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--su-ink);
+}
+.bz-su-sub {
+  margin: 4px 0 0;
+  font-size: var(--bz-font-meta);
+  line-height: 1.6;
+  color: var(--su-muted);
+}
+.bz-su-sub b {
+  color: var(--su-ink);
+  font-weight: 600;
+}
+/* 字段：表单区左对齐（可读性优先），框同解锁屏 input */
+.bz-su-field {
+  margin-top: 16px;
+  text-align: left;
+}
+.bz-su-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: var(--bz-font-caption);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--su-muted);
+}
+.bz-su-control {
+  position: relative;
+}
+.bz-su-input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 40px;
+  padding: 0 12px;
+  font-size: var(--bz-font-label);
+  color: var(--su-ink);
+  background: var(--su-surface);
+  border: 1px solid var(--su-line);
+  border-radius: var(--bz-radius-sm);
+  outline: none;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+}
+.bz-su-input::placeholder {
+  color: var(--su-faint);
+}
+.bz-su-input:focus {
+  border-color: var(--su-accent);
+}
+/* 第二框右侧留出状态位 */
+.bz-su-control .bz-su-input {
+  padding-right: 64px;
+}
+.bz-su-control.is-bad .bz-su-input {
+  border-color: var(--su-bad);
+}
+.bz-su-mark {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--bz-font-caption);
+  font-weight: 500;
+  opacity: 0;
+  transition: opacity 0.14s ease;
+  pointer-events: none;
+}
+.bz-su-mark.is-shown {
+  opacity: 1;
+}
+.bz-su-mark--ok {
+  color: var(--su-ok);
+}
+.bz-su-mark--bad {
+  color: var(--su-bad);
+}
+.bz-su-mark-ic {
+  width: 12px;
+  height: 12px;
+  display: flex;
+}
+.bz-su-mark-ic svg {
+  width: 12px;
+  height: 12px;
+}
+/* 风险告知：同解锁屏 warning 块（surface 底 + 描边），不抢戏 */
+.bz-su-warn {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 16px;
+  padding: 10px 12px;
+  border-radius: var(--bz-radius-sm);
+  background: var(--su-surface);
+  border: 1px solid var(--su-line);
+  text-align: left;
+}
+.bz-su-warn-ic {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 3px;
+  color: var(--su-warn);
+  display: flex;
+}
+.bz-su-warn-ic svg {
+  width: 14px;
+  height: 14px;
+}
+.bz-su-warn p {
+  margin: 0;
+  font-size: var(--bz-font-meta);
+  line-height: 1.7;
+  color: var(--su-muted);
+}
+.bz-su-warn p b {
+  color: var(--su-ink);
+  font-weight: 600;
+}
+/* 勾选 */
+.bz-su-ack {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: var(--bz-font-meta);
+  line-height: 1.6;
+  color: var(--su-muted);
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+}
+.bz-su-ack input {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin: 1px 0 0;
+  accent-color: var(--su-accent);
+  cursor: pointer;
+}
+.bz-su-ack.is-on {
+  color: var(--su-ink);
+}
+.bz-su-err {
+  min-height: 18px;
+  margin-top: 8px;
+  font-size: var(--bz-font-meta);
+  line-height: 1.4;
+  color: var(--su-bad);
+  text-align: left;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.bz-su-err.is-shown {
+  opacity: 1;
+}
+/* 主按钮整行——同解锁屏 action：accent 实底白字；次按钮同 cancel：描边幽灵钮。
+   特异性用 .bz-su button.*（0,2,1）：主题常用 .theme-light button（0,1,1）把按钮刷成 ghost，
+   单类压不住；accent 链再加一层字面保底，主题没给 --interactive-accent 时也不至于透明。 */
+.bz-su button.bz-su-go {
+  width: 100%;
+  height: 40px;
+  margin-top: 12px;
+  font-family: inherit;
+  font-size: var(--bz-font-label);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #fff;
+  background: var(--su-accent-soft, var(--bz-brand, #e2571c));
+  border: none;
+  border-radius: var(--bz-radius-sm);
+  cursor: pointer;
+  transition: opacity 0.14s ease;
+}
+@media (hover: hover) {
+  .bz-su button.bz-su-go:hover {
+    opacity: 0.92;
+  }
+}
+.bz-su button.bz-su-go:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.bz-su button.bz-su-later {
+  width: 100%;
+  height: 38px;
+  margin-top: 8px;
+  font-family: inherit;
+  font-size: var(--bz-font-label);
+  color: var(--su-muted);
+  background: transparent;
+  border: 1px solid var(--su-line);
+  border-radius: var(--bz-radius-sm);
+  cursor: pointer;
+  transition: color 0.14s ease, border-color 0.14s ease;
+}
+@media (hover: hover) {
+  .bz-su button.bz-su-later:hover {
+    color: var(--su-ink);
+    border-color: var(--su-ink);
+  }
+}
+.bz-su button.bz-su-later:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 
@@ -4786,7 +5244,11 @@ a.bz-crumb:hover, button.bz-crumb:hover { color: var(--bz-text-1); }
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  /* 窄屏可能要摆三个动作（稍后 / 视频 / 重新检测）：不换行就会挤出容器 */
+  flex-wrap: wrap;
   gap: var(--bz-space-sm);
+  /* 换行后的行距（gap 会重置 row-gap，必须写在它后面） */
+  row-gap: var(--bz-space-xs);
   flex: none;
   padding-top: var(--bz-space-xs);
 }
@@ -4834,6 +5296,66 @@ a.bz-crumb:hover, button.bz-crumb:hover { color: var(--bz-text-1); }
 /* 输入框隐藏时（Ollama 不需要密钥）它不再是 grid item，行内按钮会落进 1fr 那格被
    拉满整行——让它始终贴右。 */
 .bz-setup-row .bz-setup-link { justify-self: end; }
+/* 底栏里的文字链（⑥ 完成屏「看使用教程」）：贴左、与按钮同高同一档字号——
+   它是行内按钮的尺寸，直接放进底栏会矮一头，看起来像漏了个控件。 */
+.bz-setup-link--foot {
+  height: var(--bz-control-h);
+  margin-right: auto;
+  font-size: var(--bz-font-label);
+}
+
+/* ── 引导页里的流程框（core/setup-wizard.ts） ──
+   默认流程框是 400px 窄卡 + 居中正文 + 灰底胶囊按钮：单独看没问题，摆在 720px 宽的
+   引导页里就像另一个插件弹出来的（2026-10-31 用户截图指出）。这里把它拉回引导页那套形制——
+   左对齐正文、按内容定宽的描边按钮、居右排布，跟 `.bz-setup-foot` 同一个样子。
+   选择器带 id 是必需的：popup 的 `align-items/text-align:center` 写在 `#__shared_confirm_popup__`
+   上（1,0,0），只靠两个类（0,2,0）压不住。
+   两种用法都走这套皮：关闭确认（右键=危险）、跳视频确认（右键=主要动作，保持品牌实底）。 */
+#__shared_confirm_popup__.bz-setup-flow {
+  width: min(460px, calc(100vw - 32px));
+  align-items: stretch;
+  text-align: left;
+}
+#__shared_confirm_popup__.bz-setup-flow h4 {
+  margin: 0 0 var(--bz-space-sm) 0;
+  font-size: var(--bz-font-emphasis);
+}
+#__shared_confirm_popup__.bz-setup-flow p {
+  margin: 0 0 var(--bz-space-lg) 0;
+  font-size: var(--bz-font-meta);
+  line-height: 1.55;
+  color: var(--bz-text-2);
+}
+#__shared_confirm_popup__.bz-setup-flow .confirm-actions {
+  justify-content: flex-end;
+  gap: var(--bz-space-sm);
+}
+/* 按钮按文字定宽（底栏按钮不拉伸），左键统一 .bz-setup-btn 形制：透明底 + 1px 描边 */
+#__shared_confirm_popup__.bz-setup-flow #__shared_confirm_cancel__,
+#__shared_confirm_popup__.bz-setup-flow #__shared_confirm_ok__ {
+  flex: 0 0 auto;
+  font-weight: var(--bz-weight-regular);
+}
+#__shared_confirm_popup__.bz-setup-flow #__shared_confirm_cancel__ {
+  border: 1px solid var(--bz-border);
+  background: transparent;
+  color: var(--bz-text-1);
+}
+/* 危险右键（关闭确认）：描边透明 + 只染字色，不给实底高亮。
+   core/styles.css 的 `.bz-flow-dialog--danger` 会给右键压一套中性次级形制（灰底），
+   与这里同特异性——靠文件顺序定胜负不可靠，多带一个类（1,3,0）压回来。 */
+#__shared_confirm_popup__.bz-flow-dialog.bz-flow-dialog--danger.bz-setup-flow #__shared_confirm_ok__ {
+  border: 1px solid var(--bz-border);
+  background: transparent;
+  box-shadow: none;
+  color: var(--bz-danger);
+}
+@media (hover: hover) {
+  #__shared_confirm_popup__.bz-setup-flow #__shared_confirm_cancel__:hover,
+  #__shared_confirm_popup__.bz-flow-dialog--danger.bz-setup-flow #__shared_confirm_ok__:hover {
+    background: var(--bz-surface-hover);
+  }
+}
 
 /* 可勾选行：勾选框占状态点那一格 */
 .bz-setup-row--pick { grid-template-columns: 14px minmax(0, 1fr) auto; align-items: center; }
@@ -4886,6 +5408,395 @@ a.bz-crumb:hover, button.bz-crumb:hover { color: var(--bz-text-1); }
 
 /* 运行时隐藏（不用内联 display，样式单源） */
 .bz-setup .is-hidden { display: none; }
+/* ============================================================
+ * bz · 赞赏弹窗样式（core/reward-dialog.css）
+ *
+ * 一比一来自 `.scratch/reward/empty.html` 定稿：米白纸、金色、衬线题赠、
+ * 信笺横线空态、底部金弧落款。**这里刻意不消费 --bz-* 设计 token**——
+ * 它不是通用组件，是一张「纸」，明暗主题下都保持纸的样子；
+ * 唯一的例外是弹窗壳的外形（圆角/投影）与 Obsidian 遮罩的层叠关系。
+ *
+ * 变量全部挂在 .bz-overlay-popup.bz-rw-modal 作用域内（--rw-*），不外泄。
+ * ============================================================ */
+
+.bz-overlay-popup.bz-rw-modal {
+  --rw-paper: #fcf9f3;
+  --rw-ink: #26221d;
+  --rw-ink-soft: #453f36;
+  --rw-faint: #a89e8b;
+  --rw-line: #ebe2cf;
+  --rw-gold: #bd9440;
+  --rw-gold-deep: #9c7a30;
+  --rw-serif: "Source Han Serif SC", "Noto Serif SC", "Songti SC", "STSong", SimSun, serif;
+
+  width: 520px;
+  height: min(720px, calc(100vh - 48px));
+  max-height: calc(100vh - 48px);
+  /* 自己钉住居中：core/styles.css 与 ui/components.css 各有一版 .bz-overlay-popup
+   * （一版 fixed+translate、一版 flex item 无 position），谁后置生效随聚合顺序变。
+   * 这里用最高特异性写死，弹窗位置不跟着别人的顺序漂（2026-10-30 实测偏到右下）。 */
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--rw-paper);
+  border: 0;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, .55) inset,
+    0 32px 70px -18px rgba(0, 0, 0, .75),
+    0 0 0 1px rgba(0, 0, 0, .35);
+}
+
+.bz-overlay-popup.bz-rw-modal::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(189, 148, 64, .5), transparent);
+  z-index: 3;
+}
+
+/* 弹窗正文容器（uiModal 的 .bz-dialog-body 在壳内，撑满剩余高度） */
+.bz-rw-modal .bz-dialog-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.bz-rw {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- 抬头 ---------- */
+.bz-rw-head {
+  flex: none;
+  padding: 30px 30px 0;
+  text-align: center;
+}
+
+.bz-rw-kicker {
+  font-size: 10px;
+  letter-spacing: .44em;
+  text-indent: .44em;
+  color: var(--rw-gold-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  margin-bottom: 19px;
+}
+
+.bz-rw-kicker::before,
+.bz-rw-kicker::after {
+  content: "";
+  width: 20px;
+  height: 1px;
+  background: rgba(189, 148, 64, .38);
+}
+
+.bz-rw-lead {
+  margin: 0 auto;
+  max-width: 352px;
+  font-family: var(--rw-serif);
+  font-size: 14.5px;
+  line-height: 2.1;
+  color: var(--rw-ink-soft);
+  letter-spacing: .05em;
+}
+
+/* ---------- 码 ---------- */
+.bz-rw-code {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 30px 22px;
+}
+
+.bz-rw-code-box {
+  width: 154px;
+  height: 154px;
+  background: #fff;
+  border-radius: 9px;
+  border: 1px solid var(--rw-line);
+  box-shadow: 0 14px 28px -12px rgba(70, 50, 10, .3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.bz-rw-code-box::after {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border: 1px solid rgba(189, 148, 64, .16);
+  border-radius: 15px;
+  pointer-events: none;
+}
+
+.bz-rw-code-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  border-radius: 9px;
+}
+
+.bz-rw-ways {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font-size: 10px;
+  letter-spacing: .18em;
+  text-indent: .18em;
+  color: #b9ae98;
+}
+
+.bz-rw-ways::before,
+.bz-rw-ways::after {
+  content: "";
+  width: 16px;
+  height: 1px;
+  background: rgba(189, 148, 64, .4);
+}
+
+/* ---------- 名单 ---------- */
+.bz-rw-list {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  margin: 0 30px;
+  border-top: 1px solid var(--rw-line);
+}
+
+.bz-rw-list::before,
+.bz-rw-list::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 16px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.bz-rw-list::before {
+  top: 0;
+  background: linear-gradient(var(--rw-paper), rgba(252, 249, 243, 0));
+}
+
+.bz-rw-list::after {
+  bottom: 0;
+  background: linear-gradient(rgba(252, 249, 243, 0), var(--rw-paper));
+}
+
+.bz-rw-names {
+  list-style: none;
+  margin: 0;
+  height: 100%;
+  overflow-y: auto;
+  padding: 14px 0 16px;
+  /* 滚动条交给 core/ui/components.css 的界面级单源（ADR-0122）：这里不写 thin、不自绘 thumb。
+     此前留了 thin + 5px 自绘拇指，因为滚动条守卫只扫 styles.css，这个文件一直没被扫到。 */
+}
+
+.bz-rw-names li {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: 14px;
+  padding: 14px 0 13px;
+  border-bottom: 1px solid rgba(235, 226, 207, .85);
+}
+
+.bz-rw-names li:last-child { border-bottom: 0; }
+
+.bz-rw-no {
+  font-family: var(--rw-serif);
+  font-size: 10.5px;
+  color: #cabfa6;
+  letter-spacing: .04em;
+  padding-top: 2px;
+}
+
+.bz-rw-who-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.bz-rw-who {
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: .08em;
+  color: var(--rw-ink);
+}
+
+.bz-rw-meta {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.bz-rw-amt {
+  font-family: var(--rw-serif);
+  font-size: 12px;
+  color: var(--rw-gold-deep);
+}
+
+.bz-rw-amt i {
+  font-style: normal;
+  font-size: 9.5px;
+  margin-right: 1px;
+  opacity: .75;
+}
+
+.bz-rw-when {
+  font-size: 10px;
+  color: #bdb2a0;
+  letter-spacing: .04em;
+}
+
+.bz-rw-msg {
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.9;
+  color: var(--rw-ink-soft);
+}
+
+/* ---------- 空态（一张还没写过字的信笺） ---------- */
+.bz-rw-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.bz-rw-empty::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(to bottom, transparent 0 33px, rgba(235, 226, 207, .8) 33px 34px);
+  pointer-events: none;
+}
+
+.bz-rw-mark {
+  position: relative;
+  width: 5px;
+  height: 5px;
+  border: 1px solid rgba(189, 148, 64, .55);
+  transform: rotate(45deg);
+  margin-bottom: 15px;
+}
+
+.bz-rw-empty p {
+  position: relative;
+  background: var(--rw-paper);
+  padding: 0 22px;
+  font-family: var(--rw-serif);
+  font-size: 12px;
+  letter-spacing: .16em;
+  text-indent: .16em;
+  color: #b6ab97;
+}
+
+/* ---------- 落款（只剩那道金弧，字已删） ---------- */
+.bz-rw-foot {
+  flex: none;
+  position: relative;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bz-rw-foot svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------- 关闭钮（桌面右上角；移动端见窄屏段，距顶 44px） ---------- */
+.bz-rw-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #c0b5a0;
+  cursor: pointer;
+  z-index: 4;
+  transition: background .15s, color .15s;
+}
+
+/* 触屏无 hover，悬停反馈只给鼠标（bd-paradigm-hover-isolation 守卫要求） */
+@media (hover: hover) {
+  .bz-rw-close:hover {
+    background: rgba(38, 34, 29, .05);
+    color: var(--rw-ink);
+  }
+}
+
+/* ---------- 移动端：真全屏（与各域面板同口径：100vw + core 可视视口 --bz-vvh） ----------
+   断点跟各域面板一致用 768（原先 560：平板竖屏 / 大屏手机 600~760 落在缝里，
+   那时走的是桌面居中卡——面板顶上就空出一条 44px 的缝，用户看到的是「没全屏」）。
+   uiModal 会内联 maxWidth=min(520px, 100vw-32px)，不压过它就会右侧缺一条纸。 */
+@media (max-width: 768px) {
+  .bz-overlay-popup.bz-rw-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    transform: none;
+    width: 100vw;
+    max-width: 100vw !important;
+    height: var(--bz-vvh, 100vh);
+    max-height: var(--bz-vvh, 100vh);
+    border-radius: 0;
+  }
+}
+
+/* ---------- 窄屏内容缩距（全屏壳之上，只管字号与留白） ---------- */
+@media (max-width: 560px) {
+
+  .bz-rw-head { padding: 26px 24px 0; }
+  .bz-rw-code { padding: 20px 24px 18px; }
+  .bz-rw-code-box { width: 134px; height: 134px; }
+  .bz-rw-list { margin: 0 24px; }
+  .bz-rw-lead { font-size: 13.5px; }
+
+  .bz-rw-close {
+    top: max(44px, env(safe-area-inset-top));
+    right: 18px;
+    width: 34px;
+    height: 34px;
+  }
+}
 .stf__parent {
   position: relative;
   display: block;
@@ -6079,6 +6990,23 @@ a.bz-crumb:hover, button.bz-crumb:hover { color: var(--bz-text-1); }
 .bz-diary-fallback { position: fixed; inset: 0; z-index: 600; display: flex; align-items: center; justify-content: center; }
 .bz-diary-fallback[hidden] { display: none; }
 .bz-diary-fb-paper { background: #fff8d6; padding: 30px 36px; font-size: 17px; line-height: 32px; text-align: center; transform: rotate(-1.5deg); box-shadow: 0 20px 50px rgba(0,0,0,.5); }
+/* 未配置日记文件夹的引导纸（2026-10-30）：还是那张黄便签，多了标题/说明/一个去设置的钮。
+   纸面是浅黄底，字色一律写死深棕——不能吃主题变量，深色主题下会变成一片看不见的字。 */
+.bz-diary-fb-paper.bz-diary-fb-lead { max-width: 420px; line-height: 26px; }
+.bz-diary-fb-lead-title { font-size: 17px; font-weight: 600; color: #3d2f0c; margin-bottom: 8px; }
+.bz-diary-fb-lead-desc { font-size: 13px; color: #6b5720; margin-bottom: 16px; }
+.bz-diary-fb-lead-act { display: flex; justify-content: center; }
+/* 空册：写在左侧书页上的那一段（形制照真日记——标题 + 正文 + 一句引导，
+   不是浮在书上的卡片；落点是当时生效的日记文件夹） */
+.bz-diary-void-entry { padding: 2px 0 8px; }
+.bz-diary-void-entry p { margin: 0 0 10px; font-size: 15px; line-height: 2; color: var(--bz-diary-ink); }
+.bz-diary-void-entry p.bz-diary-void-title { font-size: 16px; font-weight: 600; }
+.bz-diary-void-link { border: 0; background: none; padding: 0; font: inherit; font-size: 13px; cursor: pointer;
+  color: #b3564d; text-decoration: underline; text-underline-offset: 4px; }
+/* 触屏悬浮隔离范式（呈报#9 / F4）：:hover 一律包进 @media (hover: hover)，防触屏粘滞 */
+@media (hover: hover) {
+  .bz-diary-void-link:hover { color: #8d3b33; }
+}
 
 /* 撕页碎片 */
 .bz-diary-scrap {
@@ -6735,7 +7663,7 @@ a.bz-crumb:hover, button.bz-crumb:hover { color: var(--bz-text-1); }
 
 /* ---- 桌面右键菜单皮肤（.bz-item-menu.bz-home-menu，2026-09-11）----
    用户：「首页的右键菜单没有背景色，整体风格和首页的风格一致」。两个原因叠在一起：
-   ① core 基线取主题 `--background-secondary`，而评审壳只 mock 了 `--background-primary`
+   ① core 基线取主题 `--background-secondary`，而旧评审壳（已退役）只 mock 了 `--background-primary`
       → 解析失败 = 菜单透明（core 侧已加兜底链）；
    ② 首页的 `--h-*` 定义在 **`.bz-home-panel` 作用域**内，而菜单挂在 `body` 上**够不着** ——
       所以这里按首页口径**重新声明一份**，再被下面的规则消费。
@@ -8210,6 +9138,16 @@ a.bz-crumb:hover, button.bz-crumb:hover { color: var(--bz-text-1); }
 .bz-clip-mob-arch .bz-clip-mob-item { padding-left: 3px; }
 /* 目录空态（搜索无命中 / 暂无内容） */
 .bz-clip-mob-no-hit { padding: 40px 0; text-align: center; font-family: var(--clip-serif); font-size: 18.75px; letter-spacing: 2px; color: var(--clip-muted); }
+/* 未配置剪藏文件夹（移动端引导）：与 .bz-clip-mob-no-hit 同族——纸面、衬线、字距；
+   钮是墨线方角，跟本域期刊式排版一致，不用宿主的实心圆角主钮 */
+.bz-clip-mob-nodir { padding: 64px 8px 0; text-align: center; }
+.bz-clip-mob-nodir-title { font-family: var(--clip-serif); font-size: 19.5px; letter-spacing: 2px; color: var(--clip-ink); }
+.bz-clip-mob-nodir-desc { margin-top: 14px; font-family: var(--clip-serif); font-size: 15px; line-height: 2; letter-spacing: 1px; color: var(--clip-muted); }
+.bz-clip-mob-nodir-btn { margin-top: 26px; border: 1px solid var(--clip-ink); background: none; color: var(--clip-ink);
+  font-family: var(--clip-serif); font-size: 15px; letter-spacing: 2px; padding: 7px 22px; border-radius: 2px; cursor: pointer; }@media (hover: hover) {
+
+.bz-clip-mob-nodir-btn:hover { background: var(--clip-ink); color: var(--clip-paper); }
+}
 
 /* ---- 移动详情（屏2 overlay，原型 .detail-screen） ---- */
 .bz-clip-mob-detail { position: absolute; inset: 0; background: var(--clip-paper); display: none; flex-direction: column; z-index: 2; }
@@ -9212,6 +10150,42 @@ a.bz-crumb:hover, button.bz-crumb:hover { color: var(--bz-text-1); }
 
 .bz-rss-cat-empty { padding: 28px 12px; text-align: center; }
 .bz-rss-cat-empty-text { font-size: var(--font-ui-small); color: var(--text-muted); margin: 0 0 14px; }
+
+/* ══════════════════════════════════════════════════════════════════
+   未配置引导（桌面）与教程入口
+   本域是纸面 + 衬线 + 字距的期刊语言；core 通用空态卡是宿主配色 + 实心主钮，
+   贴在这儿像另一个软件，故引导自己拼（移动端 .bz-clip-mob-nodir 同族）。
+   ══════════════════════════════════════════════════════════════════ */
+.bz-clip-nodir { padding: 64px 20px; text-align: center; }
+.bz-clip-nodir-title { font-family: var(--clip-serif); font-size: 19.5px; letter-spacing: 2px; color: var(--clip-ink); }
+.bz-clip-nodir-desc { margin-top: 12px; font-family: var(--clip-serif); font-size: 14.5px; line-height: 2; letter-spacing: 1px; color: var(--clip-muted); }
+.bz-clip-nodir-act { margin-top: 24px; display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap; }
+.bz-clip-nodir-btn { border: 1px solid var(--clip-ink); background: none; color: var(--clip-ink); font-family: var(--clip-serif);
+  font-size: 14.5px; letter-spacing: 2px; padding: 7px 22px; border-radius: 2px; cursor: pointer; }
+/* 教程入口：行内衬线链接（未配置 / 空册 / 移动端三处共用） */
+.bz-clip-tut { border: 0; background: none; padding: 0; cursor: pointer; font-family: var(--clip-serif);
+  font-size: 14px; letter-spacing: 1.5px; color: var(--clip-accent); border-bottom: 1px solid currentColor; }
+.bz-clip-tut--block { margin-top: 14px; align-self: center; }
+.bz-clip-tut--mob { display: block; margin: 22px auto 0; font-size: 14px; }@media (hover: hover) {
+
+.bz-clip-nodir-btn:hover { background: var(--clip-ink); color: var(--clip-paper); }
+.bz-clip-tut:hover { opacity: .72; }
+}
+
+/* 右侧阅读区空态（未配置 / 空册 / 未选中同屏）：纸面一行小字 + 教程，不用通用空态卡 */
+.bz-clip-read-empty { height: 100%; min-height: 240px; box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; padding: 40px 20px; text-align: center; }
+.bz-clip-read-empty-t { font-family: var(--clip-serif); font-size: 16px; letter-spacing: 2px; color: var(--clip-muted); }
+
+/* 未配置 / 空册：左右并成一栏——站点 rail、目录头、右侧阅读窗格一起收起，
+   中间那块撑满面板并居中（否则左边一句引导、右边一句「从列表选择一篇文章」，像两块坏区域） */
+.bz-clip-desk-body.is-void .bz-clip-rail,
+.bz-clip-desk-body.is-void .bz-clip-toc-head,
+.bz-clip-desk-body.is-void .bz-clip-read { display: none; }
+.bz-clip-desk-body.is-void .bz-clip-mid { flex: 1; width: auto; border-right: 0; }
+.bz-clip-desk-body.is-void .bz-clip-list { display: flex; align-items: center; justify-content: center; }
+.bz-clip-desk-body.is-void .bz-clip-list > * { width: 100%; }
 /* ==================== 收藏本域样式（src/favorites/styles.css，issue 227「C5 终版」1:1 换血） ====================
  * 原型 .zcode/ui-prototypes/favorites-cork-5/c5-linen-full.html 逐字照搬（ADR-0101，用户拍板豁免铁律 6：
  * 面板 UI 不使用样式库/组件库，全部域内自带）。类名映射：.tags→.bz-fav-tags、.card→.bz-fav-card、
@@ -10681,7 +11655,7 @@ input.bz-people-input.bz-people-input::-webkit-calendar-picker-indicator {
 
 /* 系统里关了动效就都别动（该在的位置还在）：飞过去的照片、视差、显影全部停手；
    掀纸这种大位移不做 —— 但换页总得看得出来，就改成整册闪一下 */
-/* html 上挂 .force-motion 就不认这条偏好（评审壳会替两边挂上：这册子的用处就是看动效，
+/* html 上挂 .force-motion 就不认这条偏好（旧评审壳（已退役）会替两边挂上：这册子的用处就是看动效，
    系统关了动画的话，光看静态截图是评不出手感的） */
 @media (prefers-reduced-motion: reduce) {
   .bz-people-scope:not(.force-motion) *, .bz-people-scope:not(.force-motion) *::before, .bz-people-scope:not(.force-motion) *::after {
@@ -12405,7 +13379,7 @@ canvas { display: block; }
     .pomodoro-btn-armed:hover:not(:disabled),
     .pomodoro-btn-armed:active:not(:disabled) { background: var(--pz-hot, var(--text-error, var(--interactive-accent))); color: var(--pz-on-accent, var(--text-on-accent)); }
 
-    /* 主按钮同样不换底色：--interactive-accent-hover 是 Obsidian 主题变量，评审壳（以及部分主题）
+    /* 主按钮同样不换底色：--interactive-accent-hover 是 Obsidian 主题变量，旧评审壳（已退役）（以及部分主题）
        拿不到 → 背景声明整条失效变透明，而字色是 --pz-on-accent 白字 → 白字糊在弹窗底色上「发白」
        （用户 2026-09-24 报）。统一走本色轻微提亮，与次按钮同口径。 */
     .pomodoro-btn-primary:hover:not(:disabled):not(.pomodoro-btn-armed) { background: var(--pz-accent, var(--interactive-accent)); filter: brightness(1.07); }
@@ -14805,9 +15779,10 @@ canvas { display: block; }
    守卫 :not(.bz-flow-dialog--danger)：危险主动作时 core 的 bz-flow-dialog--danger 把主钮
    降级成中性底 + 红字（设计手册 §9/§10 既定口径），域规则不得把它盖回金色 ——
    本条在危险态下直接不匹配，危险语义与配色原样保留。
-   本域两处确认框的分工（issue 291 评审补）：「设置主密码」是风险告知门、主动作是首设正向路径，
-   **不标 danger** → 走本条金色主钮；「仍要重设」是破坏性重设（旧数据永久不可恢复），**已标 danger**
-   → 本条不匹配、落到 core 中性档。issue 365 收编的删除类 askConfirm 同理走 danger 档（红字主钮）。 */
+   本域确认框的分工（issue 291 评审补）：「仍要重设」是破坏性重设（旧数据永久不可恢复），**已标 danger**
+   → 本条不匹配、落到 core 中性档。issue 365 收编的删除类 askConfirm 同理走 danger 档（红字主钮）。
+   首设的风险告知不再走流程框（收归三域共用的 setup-screen，告知与勾选在面板内一次说完），
+   故本条只剩「清单损坏重设」这一个非危险候选。 */
 #__shared_confirm_popup__.bz-pwv-flow-dialog:not(.bz-flow-dialog--danger) #__shared_confirm_ok__ {
   background: var(--pwv-gold-soft);
   color: #fff;
@@ -15581,6 +16556,17 @@ canvas { display: block; }
   min-width: 0;
 }
 .bz-sp-group-body .bz-sp-set-row:first-child { border-top: 0; }
+/* 深链锚点（域空态「打开设置」→ 落到该填的那一行）：进场亮两秒就退，别留成常驻高亮 */
+.bz-sp-set-row.is-anchor {
+  background: var(--sp-accent-soft);
+  box-shadow: inset 3px 0 0 var(--sp-accent);
+  animation: bzSpAnchor 2.2s var(--bz-ease-out) 1;
+}
+@keyframes bzSpAnchor {
+  0% { background: var(--sp-accent-soft); }
+  70% { background: var(--sp-accent-soft); }
+  100% { background: transparent; }
+}
 /* 首位门控行被藏起来时，看不见的 :first-child 不再是首行——下面那行就会把上边线画到组标题底下，
    凭空多出一条线（「在线资源」组的「检查更新」行恒在首位且按需隐藏，就是这个情形，ADR-0205/0207）。
    线要归第一个**可见**行走：只在「首位被隐藏」这一种情形补一条抑制，中间行被搜索过滤藏起来时
@@ -15594,6 +16580,60 @@ canvas { display: block; }
 }
 .bz-sp-set-info { min-width: 0; }
 .bz-sp-set-name { font-size: var(--bz-font-label); color: var(--sp-ink); }
+/* ── 关于组的行图标（2026-10-30）──
+ * 只给「反馈 / GitHub 主页 / 使用教程 / 赞赏」四行：前三行（版本、自动更新、环境自检）
+ * 是同组的操作/状态行，用户要求去掉图标——它们已经贴着组标题，再挂一枚只会显得吵。
+ * 一枚 20px 圆角块 + 内嵌描边图标（feather 口径，stroke 2）。
+ * 走 data-key 定位而不是给 schema 加 icon 字段：行键 = 绑定键 || 行名，自绘面板才有
+ * .bz-sp-set-name，Obsidian 原生设置界面（.setting-item-name）自动不受影响——
+ * 不必为几行图标去动两套渲染器，也就不会出现两边不一致。
+ * 形状只定义一次，每行覆写三支变量：底色 / 描边 / 图标。 */
+.bz-sp-set-row[data-key="反馈"] .bz-sp-set-name::before,
+.bz-sp-set-row[data-key="GitHub 主页"] .bz-sp-set-name::before,
+.bz-sp-set-row[data-key="使用教程"] .bz-sp-set-name::before,
+.bz-sp-set-row[data-key="打赏"] .bz-sp-set-name::before {
+  content: "";
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  margin-right: 9px;
+  vertical-align: -5px;
+  border-radius: 6px;
+  border: 1px solid var(--bz-row-ic-bd);
+  background-color: var(--bz-row-ic-bg);
+  background-image: var(--bz-row-ic);
+  background-position: center;
+  background-size: 12px 12px;
+  background-repeat: no-repeat;
+}
+
+/* 反馈 · 橙（品牌色）· 对话气泡 */
+.bz-sp-set-row[data-key="反馈"] .bz-sp-set-name::before {
+  --bz-row-ic-bg: #fdeee7;
+  --bz-row-ic-bd: #f8d8c7;
+  --bz-row-ic: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e67341' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z'/%3E%3C/svg%3E");
+}
+
+/* GitHub 主页 · 墨 · 猫 */
+.bz-sp-set-row[data-key="GitHub 主页"] .bz-sp-set-name::before {
+  --bz-row-ic-bg: #eeeef2;
+  --bz-row-ic-bd: #dcdce4;
+  --bz-row-ic: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2344444c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 19c-5 1.5-5-2.5-7-3m14 6v-3.9a3.4 3.4 0 00-.9-2.6c3.1-.4 6.4-1.5 6.4-7A5.4 5.4 0 0020 4.8 5.1 5.1 0 0019.9 1S18.7.7 16 2.5a13.4 13.4 0 00-7 0C6.3.7 5.1 1 5.1 1A5.1 5.1 0 005 4.8 5.4 5.4 0 003.5 8.5c0 5.4 3.3 6.6 6.4 7a3.4 3.4 0 00-.9 2.6V22'/%3E%3C/svg%3E");
+}
+
+/* 使用教程 · 红 · 播放 */
+.bz-sp-set-row[data-key="使用教程"] .bz-sp-set-name::before {
+  --bz-row-ic-bg: #fdeced;
+  --bz-row-ic-bd: #f7d3d4;
+  --bz-row-ic: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e0555a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M10 8.5l6 3.5-6 3.5z'/%3E%3C/svg%3E");
+}
+
+/* 打赏 · 金 · 同心（与弹窗同一套纸色金；2026-10-30 行名「赞赏」改「打赏」，data-key 跟着改） */
+.bz-sp-set-row[data-key="打赏"] .bz-sp-set-name::before {
+  --bz-row-ic-bg: #fdf3dd;
+  --bz-row-ic-bd: #f0e0bc;
+  --bz-row-ic: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239c7a30' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 00-7.8 7.8l1.1 1.1L12 21.2l7.7-7.7 1.1-1.1a5.5 5.5 0 000-7.8z'/%3E%3C/svg%3E");
+}
 .bz-sp-set-desc { font-size: 11.5px; color: var(--sp-ink-2); margin-top: 2px; }
 .bz-sp-set-ctrl {
   margin-left: auto;
@@ -16640,7 +17680,7 @@ canvas { display: block; }
   }
 }
 /* ==================== 归物本域样式（src/belongings/styles.css，P20「瑞士大字报」） ====================
- * 单源：本文件同时是域内 prototype.html（评审壳）的唯一组件样式来源——先改原型评审、再落这里。
+ * 本文件是域内组件样式的唯一来源（旧评审壳已退役，ADR-0276）。
  * 视觉基准 = 拍板原型 .zcode/ui-prototypes/belongings-redesign20/p20-full.html（issue 230 方向纠正：
  * 原型 → 域，禁止拿域现状反向生成原型）。p20 的 CSS 值逐字回灌（面板 920×640 相对原型整页海报
  * 等比缩档：h1 56→40 / hero KPI 56→42 / cell em 44→40 / name 20→19 / price 25→23）。
@@ -16649,7 +17689,7 @@ canvas { display: block; }
  * 「双主题恒定纸面」旧口径）+ .bz-bel-* 装饰类；通用件继续消费组件库
  * （chips/segmented/搜索/按钮/字段），在其上做海报皮作用域覆盖（方角/墨框/下划线）。
  * 移动端：印章头 + 常驻工具行（搜索/年份/排序/记一笔）→ 单列网格（页脚与横滑 chips 已拍板
- * 退役，issue 356 报告页另有三钮）；判定走容器查询（评审壳手机框与真机全屏同源，见文末）。
+ * 退役，issue 356 报告页另有三钮）；判定走容器查询（旧评审壳（已退役）手机框与真机全屏同源，见文末）。
  * 口径：标签/徽章字号 ≥11px；不持静态 z-index；触控 44px 档走 .bz-touch-target / min-height。
  */
 
@@ -17204,7 +18244,7 @@ canvas { display: block; }
 }
 
 /* ---- 移动端（≤768px = p20 手机壳）----
-   容器查询基座：面板与年度报告遮罩各为容器（原型评审壳 .demo-mob 396px 由此触发移动端样式，
+   容器查询基座：面板与年度报告遮罩各为容器（窄视口由此触发移动端样式，
    单源双端）。表单/详情遮罩容器档已随壳收编 uiModal 退役——其内容无容器查询规则（此前为陪跑挂名）。
    真实端语义与原 @media(max-width:768px) 等价：移动全屏面板宽 = 100vw、报告页全屏。
    面板自身尺寸规则仍走 @media（容器查询不能命中容器自己）。 */
@@ -17257,7 +18297,7 @@ canvas { display: block; }
   .bz-bel-addbtn { display: none; }
   .bz-bel-mobsortsel-wrap { display: block; flex-shrink: 0; min-width: 0; }
   .bz-bel-mobsortsel-wrap .bz-bel-select { min-width: 0; }
-  /* 横滑条显示本体在 core @media(视口)；评审壳视口不窄，容器内补同效规则（真实移动端两处同值不冲突）。
+  /* 横滑条显示本体在 core @media(视口)；桌面视口不窄，容器内补同效规则（真实移动端两处同值不冲突）。
      用户拍板缩小（去资产后五枚放一行），44px 触控档让位（enh-sweep-c 守卫已同步改口径） */
   .bz-bel-panel .bz-mobstrip { display: flex; margin-top: 10px; gap: var(--bz-space-xs); }
   .bz-bel-panel .bz-mobstrip-chip { flex: 1 1 0; min-width: 0; justify-content: center; padding: 5px var(--bz-space-xs); font-size: var(--bz-font-caption); }
@@ -17308,7 +18348,7 @@ canvas { display: block; }
       放映室暗为默认氛围 → 变量组方向反转（本体=暗组，.theme-light 下回退亮组）。
    皮肤层已拍板砍去：每风格仅此一套视觉；若未来加副肤，扩展口是
    .bz-cinema-skin--<id> 纯 token 覆盖块（亮暗成对），不写结构规则。
-   清单唯一事实源：CINEMA_STYLES（评审壳 JS 内嵌；落域上岸 constants.ts）。
+   清单唯一事实源：CINEMA_STYLES（constants.ts）。
    ==================================================================== */
 
 /* ---------- 午夜场 midnight（探索稿 p1-midnight.html） ---------- */
@@ -17344,7 +18384,7 @@ canvas { display: block; }
 .bz-cinema--midnight .rail-label{font-size:10.5px;letter-spacing:.3em;color:var(--ink-3);padding:0 var(--bz-space-sm) 6px}
 /* 通栏按钮（rail-item / cn-menu-item / cn-sheet-item）必须显式 justify-content:flex-start：
    宿主 app.css 的裸 button 基线是 display:inline-flex + justify-content:center，本类只把
-   display 改成 flex、不动 justify-content → 真机里图标+文字被整行居中（评审壳不载宿主
+   display 改成 flex、不动 justify-content → 真机里图标+文字被整行居中（部分主题不载宿主
    app.css，故此坑只在真机显形）。同 core 的 .bz-popover-item「钉死 button 宿主基线」处置。 */
 .bz-cinema--midnight .rail-item{display:flex;align-items:center;justify-content:flex-start;gap:var(--bz-space-sm);width:100%;padding:7px var(--bz-space-sm);border:0;background:none;border-radius:var(--bz-radius-sm);cursor:pointer;font-size:var(--bz-font-label);color:var(--ink-2);font-family:inherit;text-align:left;position:relative}@media (hover: hover) {
 
@@ -17831,6 +18871,10 @@ canvas { display: block; }
 /* 空态（面板 toast 已收编 core notice 单源，一致审查#2：自绘通道与样式段退役） */
 .bz-cinema--midnight .cn-empty-page{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--bz-space-sm);color:var(--ink-3)}
 .bz-cinema--midnight .cn-empty-page .big{font-family:"Noto Serif SC",SimSun,serif;font-size:var(--bz-font-emphasis);letter-spacing:.3em;color:var(--ink-2)}
+/* 未配置引导页（影视目录空着）：与「影片空空如也」同一套形制——衬线大字 + 墨字说明 + 金钮，
+   不用 core 通用空态卡（那是宿主浅色皮肤，跟午夜场不是一套语言） */
+.bz-cinema--midnight .cn-empty-page .cn-empty-note{max-width:32em;font-size:var(--bz-font-meta);line-height:1.9;text-align:center;color:var(--ink-3)}
+.bz-cinema--midnight .cn-empty-page .dm-btn{margin-top:var(--bz-space-xs)}
 
 /* ====================================================================
    落域适配段（issue 236 / ADR-0103；插件专用，原型不出）
@@ -19447,7 +20491,7 @@ canvas { display: block; }
     max-width: none;
     /* 移动端整屏：用动态视口高 100dvh，**不吃 --bz-vvh**——本面板没有贴底固定条
        （底部输入条是备忘录/第二大脑/小橘那类域的问题，键盘不会遮住这里的任何元素），
-       而 --bz-vvh 在评审壳里被模拟成「短 88px」，会留出底部空隙。
+       （历史）旧评审壳曾把 --bz-vvh 模拟成「短 88px」，会留出底部空隙。
        老内核不认 dvh → 前一行 100vh 兜底，与改造前一致，零劣化。 */
     height: 100vh;
     height: 100dvh;
@@ -21135,6 +22179,27 @@ canvas { display: block; }
   letter-spacing: 0.1em;
   line-height: 2;
 }
+
+/* 未配置引导态（三个盒目录空着）：纸面墨字 + 墨线钮，与知识盒整体语言一致；
+   不用 core 通用空态卡（宿主配色 + 实心主钮） */
+.bz-kb-gate {
+  height: 100%;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--bz-space-md);
+  padding: 26px 16px;
+  box-sizing: border-box;
+}
+.bz-kb-gate-title {
+  font-size: var(--bz-font-body);
+  color: var(--ink);
+  letter-spacing: 0.12em;
+}
+.bz-kb-gate .bz-kb-empty { padding: 0; }
+.bz-kb-gate-act { padding: 6px 16px; font-size: var(--bz-font-body); letter-spacing: 0.1em; }
 
 /* ===== 词条行 ===== */
 .bz-kb-lexrow {
