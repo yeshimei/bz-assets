@@ -5222,6 +5222,295 @@ a.bz-crumb:hover, button.bz-crumb:hover { color: var(--bz-text-1); }
 }
 .bz-setup-note--bad { color: var(--bz-danger); }
 
+/* ═══════════ 依赖清单弹窗 .bz-deps（core/deps-guide.ts） ═══════════
+   形制按定稿原型（.scratch/deps-guide-proto）一比一：头行 / 正文（分组卡：普通项走行、
+   模型项走表）/ 提示词 / 底栏。**不套引导页那套 .bz-setup-* 皮**——这一屏是横着比模型
+   （分数、体积、显存），逐行清单比不出来；两套形状各服务各的读法。
+   下面所有度量（20px 内边距、11.5px 表头、14px 勾选框、18px 组间距…）都是原型上的实数，
+   要改先回原型改，别只改这一处。 */
+.bz-overlay-popup.bz-deps-modal {
+  width: min(760px, calc(100vw - 40px));
+  max-height: calc(100vh - 40px);
+  padding: 0; /* 头行/底栏各自带内边距，壳不再叠一层 */
+  border-radius: 10px; /* 原型 .modal 的 10px，弹窗里别的壳是 12px——这一屏照原型 */
+  overflow: hidden; /* 滚动只发生在 .bz-deps-b，底栏常驻 */
+}
+.bz-deps-modal .bz-dialog-body { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.bz-deps { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
+
+/* ── 头行 ── */
+.bz-deps-h {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--bz-border);
+}
+.bz-deps-t { font-size: var(--bz-font-emphasis); font-weight: var(--bz-weight-semibold); color: var(--bz-text-1); }
+.bz-deps-x {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0 2px;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--bz-text-3);
+  cursor: pointer;
+  font-family: inherit;
+}
+@media (hover: hover) {
+  /* 触屏破口：:hover 在触屏上会粘住 */
+  .bz-deps-x:hover { color: var(--bz-text-1); }
+}
+.bz-deps-x:focus-visible { outline: var(--bz-focus-ring); outline-offset: 2px; }
+
+/* ── 正文（唯一滚动区） ── */
+.bz-deps-b { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 18px 20px 20px; }
+.bz-deps-grp { margin-bottom: 18px; }
+.bz-deps-grp-h {
+  font-size: 11.5px;
+  color: var(--bz-text-3);
+  letter-spacing: 0.6px;
+  margin: 0 0 8px 2px;
+}
+.bz-deps-card {
+  border: 1px solid var(--bz-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* ── 普通项一行：勾选框 / 名称（可带徽章）/ 体积 ── */
+.bz-deps-row {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: baseline;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--bz-border);
+}
+.bz-deps-row:last-child { border-bottom: 0; }
+/* 表在行后面时，行自己的下边框会被表的表头贴住，补一条分隔（原型 .card > .mt-wrap + .g-row 同款） */
+.bz-deps-card > .bz-deps-tw + .bz-deps-row { border-top: 1px solid var(--bz-border); }
+.bz-deps-key { font-size: 13.5px; color: var(--bz-text-1); min-width: 0; }
+.bz-deps-val {
+  font-size: var(--bz-font-meta);
+  color: var(--bz-text-2);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.bz-deps-val--ok { color: var(--bz-success); }
+.bz-deps-val--bad { color: var(--bz-danger); }
+
+/* 必装徽章：不抢眼，只说明「这一项没得选」 */
+.bz-deps-req {
+  font-style: normal;
+  font-size: 10.5px;
+  color: var(--bz-text-3);
+  border: 1px solid var(--bz-border);
+  border-radius: 20px;
+  padding: 0 6px;
+  margin-left: 7px;
+  vertical-align: 1px;
+  white-space: nowrap;
+}
+
+/* ── 勾选框（自绘：原生 checkbox 会被主题改成各家样子，同一个弹窗换个主题就变样） ── */
+.bz-deps-ck {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border: 1.5px solid var(--bz-border-strong);
+  border-radius: 4px;
+  background: var(--bz-surface-2);
+  cursor: pointer;
+  position: relative;
+  transform: translateY(2px); /* 与 13.5px 名称的视觉基线对齐 */
+}
+@media (hover: hover) {
+  .bz-deps-ck:hover { border-color: var(--bz-text-3); }
+}
+.bz-deps-ck:checked { background: var(--bz-brand); border-color: var(--bz-brand); }
+.bz-deps-ck:checked::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 7px;
+  border: 1.6px solid var(--bz-on-brand);
+  border-top: 0;
+  border-left: 0;
+  transform: rotate(42deg);
+}
+.bz-deps-ck:focus-visible { outline: var(--bz-focus-ring); outline-offset: 2px; }
+/* disabled 的勾选框不触发 change、也不进 Tab 序列：必装项靠它表达「改不了」。
+   压到 .45 而不是 .3——太淡会被读成「不可用」，这里要的是「已锁定」。 */
+.bz-deps-ck:disabled { cursor: default; }
+.bz-deps-ck:disabled:checked { opacity: 0.45; }
+/* 单选：外圈变圆 + 内点 */
+.bz-deps-ck--r { border-radius: 50%; }
+.bz-deps-ck--r:checked::after {
+  content: "";
+  left: 3.5px;
+  top: 3.5px;
+  width: 5px;
+  height: 5px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--bz-on-brand);
+  transform: none;
+}
+
+/* ── 模型表（嵌入 / 重排 / 转写）：缩进 36px 挂在 Ollama 那一行下面 ── */
+.bz-deps-tw { padding: 12px 14px 14px 36px; }
+.bz-deps-tb { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.bz-deps-tb th,
+.bz-deps-tb td {
+  text-align: left;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--bz-border);
+}
+.bz-deps-tb th {
+  font-size: 10.5px;
+  font-weight: var(--bz-weight-medium);
+  color: var(--bz-text-3);
+  letter-spacing: 0.4px;
+}
+.bz-deps-tb th:first-child,
+.bz-deps-tb td:first-child { padding-left: 0; }
+.bz-deps-tb tbody tr:last-child td { border-bottom: 0; }
+/* 名称列走 mono：模型名是要被抄进命令行的，字形对齐比好看重要 */
+.bz-deps-tb .bz-deps-name {
+  font-family: var(--bz-font-mono);
+  font-size: 11.5px;
+  color: var(--bz-text-1);
+  white-space: nowrap;
+}
+.bz-deps-tb .bz-deps-name .bz-deps-ck { margin-right: 7px; transform: translateY(1px); }
+.bz-deps-tb .bz-deps-num {
+  font-size: 11px;
+  color: var(--bz-text-2);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* 口径说明比数字长（「多模式，无单一分数」），这一列允许换行，别把表挤歪 */
+.bz-deps-tb .bz-deps-num--wrap { white-space: normal; color: var(--bz-text-3); }
+/* 推荐行的极淡品牌底：比 --bz-brand-soft 再淡一档，只做「扫一眼能落在推荐项上」 */
+.bz-deps-tb tr.is-hl td { background: color-mix(in srgb, var(--bz-brand) 6%, transparent); }
+/* 第二张表（重排）与第一张（嵌入）之间：一条分隔 + 拉开一档 */
+.bz-deps-sub { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--bz-border); }
+
+/* 门槛提示（重排只在 8B 嵌入时生效）：挂在卡片下面的说明行，不抢勾选区的视线——
+   用警示色但只做左边一条细线，别做成红底横幅（那不是错误，是条件没满足）。 */
+.bz-deps-warn {
+  margin: 8px 0 0 2px;
+  padding-left: 8px;
+  border-left: 2px solid var(--bz-warning);
+  font-size: var(--bz-font-caption);
+  line-height: 1.6;
+  color: var(--bz-text-2);
+}
+
+/* ── 徽章 / 链接（表内与行内共用） ── */
+.bz-deps-pill {
+  display: inline-block;
+  font-style: normal;
+  font-size: 10.5px;
+  border-radius: 20px;
+  padding: 0 7px;
+  margin-left: 7px;
+  border: 1px solid color-mix(in srgb, var(--bz-brand) 40%, transparent);
+  color: var(--bz-brand);
+  vertical-align: 1px;
+  white-space: nowrap;
+}
+.bz-deps-pill--dim { border-color: var(--bz-border); color: var(--bz-text-3); }
+.bz-deps-a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--bz-border-strong);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+@media (hover: hover) {
+  .bz-deps-a:hover { color: var(--bz-brand); text-decoration-color: var(--bz-brand); }
+}
+
+/* ── 提示词预览 ── */
+.bz-deps-pbox {
+  margin: 14px 0 0;
+  border: 1px solid var(--bz-border);
+  border-radius: 8px;
+  background: var(--bz-code-bg);
+  overflow: hidden;
+}
+.bz-deps-pbox-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 12px;
+  font-size: var(--bz-font-caption);
+  color: var(--bz-text-3);
+  border-bottom: 1px solid var(--bz-border);
+}
+.bz-deps-pbox pre {
+  margin: 0;
+  padding: 10px 12px;
+  max-height: 180px;
+  overflow-y: auto;
+  font-family: var(--bz-font-mono);
+  font-size: var(--bz-font-caption);
+  line-height: 1.75;
+  color: var(--bz-text-2);
+  /* 提示词本身就是多行文本：保留换行，长路径按字符断 */
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+/* ── 底栏：汇总 + 看教程 / 复制提示词 ── */
+.bz-deps-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 20px 14px;
+  border-top: 1px solid var(--bz-border);
+  background: var(--bz-surface-1);
+}
+.bz-deps-sum { font-size: var(--bz-font-meta); color: var(--bz-text-2); }
+.bz-deps-sum b { color: var(--bz-text-1); font-weight: var(--bz-weight-semibold); font-variant-numeric: tabular-nums; }
+.bz-deps-acts { display: flex; align-items: center; gap: 8px; flex: none; }
+/* 底栏按钮按原型收一档圆角（6px）：它坐在一条 14px 高的窄栏里，8px 会显肿 */
+.bz-deps-acts .bz-btn { border-radius: 6px; }
+.bz-deps-acts .bz-btn:not(.bz-btn--primary) { border-color: var(--bz-border); }
+
+.bz-setup-how {
+  /* 从名称列铺到右边界（状态点那一列不占） */
+  grid-column: 2 / -1;
+  font-size: var(--bz-font-caption);
+  line-height: 1.6;
+  color: var(--bz-text-2);
+  /* 命令之间用 \n 分隔（数据表里就是多行写的），别压成一行 */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.bz-setup-how code {
+  font-family: var(--bz-font-mono);
+  font-size: var(--bz-font-caption);
+  background: var(--bz-code-bg);
+  border-radius: 4px;
+  padding: 1px 5px;
+  /* 点一下选中整条命令：用户要的是复制，不是拖选 */
+  user-select: all;
+}
+
 /* ── 总进度条 ── */
 .bz-setup-bar {
   height: 3px;
@@ -5296,7 +5585,7 @@ a.bz-crumb:hover, button.bz-crumb:hover { color: var(--bz-text-1); }
 /* 输入框隐藏时（Ollama 不需要密钥）它不再是 grid item，行内按钮会落进 1fr 那格被
    拉满整行——让它始终贴右。 */
 .bz-setup-row .bz-setup-link { justify-self: end; }
-/* 底栏里的文字链（⑥ 完成屏「看使用教程」）：贴左、与按钮同高同一档字号——
+/* 底栏里的文字链（⑥ 完成屏「看视频教程」）：贴左、与按钮同高同一档字号——
    它是行内按钮的尺寸，直接放进底栏会矮一头，看起来像漏了个控件。 */
 .bz-setup-link--foot {
   height: var(--bz-control-h);
@@ -16581,7 +16870,7 @@ canvas { display: block; }
 .bz-sp-set-info { min-width: 0; }
 .bz-sp-set-name { font-size: var(--bz-font-label); color: var(--sp-ink); }
 /* ── 关于组的行图标（2026-10-30）──
- * 只给「反馈 / GitHub 主页 / 使用教程 / 赞赏」四行：前三行（版本、自动更新、环境自检）
+ * 只给「反馈 / GitHub 主页 / 视频教程 / 赞赏」四行：前三行（版本、自动更新、环境自检）
  * 是同组的操作/状态行，用户要求去掉图标——它们已经贴着组标题，再挂一枚只会显得吵。
  * 一枚 20px 圆角块 + 内嵌描边图标（feather 口径，stroke 2）。
  * 走 data-key 定位而不是给 schema 加 icon 字段：行键 = 绑定键 || 行名，自绘面板才有
@@ -16590,7 +16879,7 @@ canvas { display: block; }
  * 形状只定义一次，每行覆写三支变量：底色 / 描边 / 图标。 */
 .bz-sp-set-row[data-key="反馈"] .bz-sp-set-name::before,
 .bz-sp-set-row[data-key="GitHub 主页"] .bz-sp-set-name::before,
-.bz-sp-set-row[data-key="使用教程"] .bz-sp-set-name::before,
+.bz-sp-set-row[data-key="视频教程"] .bz-sp-set-name::before,
 .bz-sp-set-row[data-key="打赏"] .bz-sp-set-name::before {
   content: "";
   display: inline-block;
@@ -16621,8 +16910,8 @@ canvas { display: block; }
   --bz-row-ic: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2344444c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 19c-5 1.5-5-2.5-7-3m14 6v-3.9a3.4 3.4 0 00-.9-2.6c3.1-.4 6.4-1.5 6.4-7A5.4 5.4 0 0020 4.8 5.1 5.1 0 0019.9 1S18.7.7 16 2.5a13.4 13.4 0 00-7 0C6.3.7 5.1 1 5.1 1A5.1 5.1 0 005 4.8 5.4 5.4 0 003.5 8.5c0 5.4 3.3 6.6 6.4 7a3.4 3.4 0 00-.9 2.6V22'/%3E%3C/svg%3E");
 }
 
-/* 使用教程 · 红 · 播放 */
-.bz-sp-set-row[data-key="使用教程"] .bz-sp-set-name::before {
+/* 视频教程 · 红 · 播放 */
+.bz-sp-set-row[data-key="视频教程"] .bz-sp-set-name::before {
   --bz-row-ic-bg: #fdeced;
   --bz-row-ic-bd: #f7d3d4;
   --bz-row-ic: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e0555a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M10 8.5l6 3.5-6 3.5z'/%3E%3C/svg%3E");
@@ -18760,41 +19049,26 @@ canvas { display: block; }
 .bz-cinema--midnight .f-range{flex:1;-webkit-appearance:none;appearance:none;height:4px;border-radius:99px;background:var(--chip);outline:none}
 .bz-cinema--midnight .f-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:var(--gold);cursor:pointer;border:2px solid var(--panel);box-shadow:0 1px 4px #0003}
 .bz-cinema--midnight .f-range-val{min-width:36px;text-align:center;font-size:var(--bz-font-label);font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
-/* 删除确认流程框（core/flow-dialog 收编，一致审查#1：全域最后一个自绘确认框退役）。
-   行为层 openConfirm 传 className: 'cn-skin bz-cinema-flow-dialog'。为什么必须是这两个类：
-     · `cn-skin` = 午夜场调色板（本文件开头）：core 流程框挂 document.body、不在面板树内，
-       缺它下面所有变量解析失败（跟手菜单/底部抽屉皮肤同一通道）；
-     · `bz-cinema-flow-dialog` = 本域确认框专属类，承载下面这套取值。
-   取值照抄同域弹窗 .cn-modal（纸白底/墨线描边/大阴影），让「删除影视」确认框读起来就是
-   午夜场弹窗那张纸。结构与几何仍由 core 壳承担（.bz-overlay-popup 消费的 --bz-* token 起底），
-   这里只覆写颜色观感，故选择器结构与 favorites/belongings 域皮同款（id 契约映射）。 */
-#__shared_confirm_popup__.bz-cinema-flow-dialog {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  box-shadow: 0 18px 48px #0005, 0 2px 10px #0003;
+/* ---------- 危险确认框（.cn-modal--confirm，2026-11-01 用户拍板换掉 core 流程框） ----------
+   前身是 core/flow-dialog + 一段 id 选择器手映射纸色：流程框挂 document.body，本域样式全在
+   `.bz-cinema--midnight` 作用域内套不进去，颜色像了形制仍不是影院的。现在确认框走本域 ovl
+   （挂面板树内的 bz-cinema--midnight 宿主），与「片单改名」「归入片单」共用 .cn-modal 骨架，
+   这里只补确认框自己的三行结构：小标 + 片名 / 正文 / 按钮条。 */
+.bz-cinema--midnight .cn-modal--confirm{max-width:min(390px,100%);padding:20px 22px 16px}
+.bz-cinema--midnight .cf-head{display:flex;flex-direction:column;gap:5px;margin-bottom:13px;min-width:0}
+.bz-cinema--midnight .cf-kicker{font-size:10.5px;color:var(--gold);letter-spacing:.22em}
+.bz-cinema--midnight .cf-name{font-family:"Noto Serif SC",SimSun,serif;font-size:16px;line-height:1.45;letter-spacing:.04em;color:var(--ink);word-break:break-word}
+.bz-cinema--midnight .cf-body p{margin:0 0 7px;font-size:12.5px;line-height:1.75;color:var(--ink-2)}
+.bz-cinema--midnight .cf-body p:last-child{margin-bottom:0}
+.bz-cinema--midnight .cf-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:17px;padding-top:14px;border-top:1px solid var(--line)}
+.bz-cinema--midnight .cf-btn{border:1px solid var(--line);background:none;color:var(--ink-2);border-radius:10px;padding:7px 17px;font-size:12.5px;font-family:inherit;cursor:pointer;transition:border-color var(--cn-m-fast) ease,color var(--cn-m-fast) ease}
+@media (hover: hover) {
+.bz-cinema--midnight .cf-btn:hover{border-color:var(--gold);color:var(--ink)}
 }
-#__shared_confirm_popup__.bz-cinema-flow-dialog h4 {
-  font-family: "Noto Serif SC", SimSun, serif;
-  letter-spacing: .08em;
-  color: var(--ink);
-}
-#__shared_confirm_popup__.bz-cinema-flow-dialog p {
-  color: var(--ink);
-}
-/* 按钮：对齐同域弹窗 .dm-btn（墨线描边/无底/次级墨字）。删除主钮在危险态由 core 的
-   .bz-flow-dialog--danger 降为中性次级形制，本域按 .dm-btn.danger 口径把文字色交给域内
-   危险色惯例 #b3402a（午夜场调色板无 --danger token）；常态 (2,1,0) 规则天然被
-   core 危险规则 (2,2,0) 压住，危险覆写状态限定 .bz-flow-dialog--danger。 */
-#__shared_confirm_popup__.bz-cinema-flow-dialog #__shared_confirm_cancel__,
-#__shared_confirm_popup__.bz-cinema-flow-dialog #__shared_confirm_ok__ {
-  border-color: var(--line);
-  background: none;
-  color: var(--ink-2);
-}
-#__shared_confirm_popup__.bz-cinema-flow-dialog.bz-flow-dialog--danger #__shared_confirm_ok__ {
-  border-color: var(--line);
-  background: none;
-  color: #b3402a;
+/* 危险动作只换文字色（午夜场调色板无 --danger token，沿用域内惯例 #b3402a），不铺红底 */
+.bz-cinema--midnight .cf-btn--danger{border-color:#b3402a4d;color:#b3402a}
+@media (hover: hover) {
+.bz-cinema--midnight .cf-btn--danger:hover{border-color:#b3402a;color:#b3402a}
 }
 /* ---------- 统一浮层皮肤（core/item-actions：跟手菜单 .bz-item-menu / 底部抽屉 .bz-item-sheet） ----------
    移动端抽屉与跟手菜单的**手势与实现**统一走共享层（core/dom.longPress + core/item-actions：
@@ -19745,11 +20019,172 @@ canvas { display: block; }
 .bz-cinema--midnight .dimp-row .lp-label{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bz-cinema--midnight .dimp-tag{font-size:10.5px;letter-spacing:.06em;flex:none;padding:1px 8px;border-radius:99px;border:1px solid var(--line);color:var(--ink-3)}
 .bz-cinema--midnight .dimp-row:not(.is-inlib) .dimp-tag{border-color:var(--gold);color:var(--gold)}
+/* 导入清单行右挂的豆瓣评分（星）与标记日期（只看过清单有；片单页没有这两项）——
+   星级走卡片同一份 starsHtml，此处只管排版：日期灰、评分金，都不抢片名 */
+.bz-cinema--midnight .dimp-score{flex:none;font-size:11px;letter-spacing:.04em;color:var(--gold)}
+.bz-cinema--midnight .dimp-at{flex:none;font-size:10.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
 .bz-cinema--midnight .dimp-newlist{display:flex;align-items:center;gap:10px}
 .bz-cinema--midnight .dimp-newlist label{flex:none;font-size:12.5px;color:var(--ink-2)}
 .bz-cinema--midnight .dimp-newlist input{flex:1;min-width:0;background:var(--chip);border:1px solid var(--line);border-radius:10px;padding:8px 12px;color:var(--ink);font-size:12.5px;font-family:inherit;outline:none;transition:border-color var(--cn-m-fast) ease}
 .bz-cinema--midnight .dimp-newlist input::placeholder{color:var(--ink-3)}
 .bz-cinema--midnight .dimp-newlist input:focus{border-color:var(--gold)}
+
+/* ==================== 豆瓣三状态导入（cn-modal--mine） ====================
+   1:1 复刻 2026-10-31 定稿原型 `.scratch/douban-mine-sync/prototype.html`：
+   540 宽（影院面板 900 的 60%）、三状态固定在顶部、片单汇总成一个自由滚动列表、
+   确认层收窄到 440 且只留风控警告、同步层用五条流动窗口。
+   改视觉先改原型再回灌这里，别就地调参（弹窗穿衣规矩见 AGENTS.md）。
+   ==================== */
+
+.bz-cinema--midnight .cn-modal--mine{width:540px;max-width:calc(100% - 16px);max-height:calc(100% - 12px);
+  padding:0;overflow:hidden;display:flex;flex-direction:column;gap:0}
+.bz-cinema--midnight .cn-modal--mine.is-confirm{width:440px}
+.bz-cinema--midnight .mine-stage{display:flex;flex-direction:column;min-height:0;flex:1}
+.bz-cinema--midnight .mine-stage[hidden]{display:none}
+
+/* 头 */
+.bz-cinema--midnight .mine-h{flex:none;display:flex;align-items:flex-start;gap:12px;padding:22px 22px 15px}
+.bz-cinema--midnight .mine-ht{min-width:0}
+.bz-cinema--midnight .mine-tt{font-family:"Noto Serif SC",SimSun,serif;font-size:20px;font-weight:700;letter-spacing:.1em;line-height:1.3;color:var(--ink)}
+.bz-cinema--midnight .mine-sub{margin-top:7px;font-size:12.5px;color:var(--ink-2);line-height:1.7}
+.bz-cinema--midnight .mine-sub b{color:var(--gold);font-weight:600;font-variant-numeric:tabular-nums;font-size:13px}
+.bz-cinema--midnight .mine-x{margin-left:auto;flex:none;width:28px;height:28px;border:1px solid transparent;background:none;
+  border-radius:7px;color:var(--ink-3);line-height:1;cursor:pointer;display:grid;place-items:center;padding:0}
+.bz-cinema--midnight .mine-x svg{width:15px;height:15px}
+
+/* 抓取扫描带 */
+.bz-cinema--midnight .mine-scan{flex:none;height:2px;margin:0 22px;background:var(--line);overflow:hidden;
+  position:relative;border-radius:2px;transition:opacity var(--cn-m-base) ease}
+.bz-cinema--midnight .mine-scan::after{content:"";position:absolute;top:0;bottom:0;left:0;width:26%;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);animation:cnMineScan 1.1s linear infinite}
+.bz-cinema--midnight .mine-scan.done{opacity:0}
+.bz-cinema--midnight .mine-scan.done::after{animation:none}
+@keyframes cnMineScan{from{transform:translateX(-110%)}to{transform:translateX(420%)}}
+
+/* 顶部三状态（固定在列表之上） */
+.bz-cinema--midnight .mine-bar{flex:none;display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:12px}
+.bz-cinema--midnight .mine-bar-c{background:var(--panel);padding:10px 11px;cursor:pointer;user-select:none;display:flex;
+  gap:9px;align-items:flex-start;transition:background var(--cn-m-fast) ease}
+.bz-cinema--midnight .mine-bar-c.on{background:var(--chip)}
+.bz-cinema--midnight .mine-bar-b{min-width:0;flex:1}
+.bz-cinema--midnight .mine-bar-t{display:flex;align-items:baseline;gap:6px}
+.bz-cinema--midnight .mine-bar-nm{font-family:"Noto Serif SC",SimSun,serif;font-size:13.5px;font-weight:700;letter-spacing:.1em;color:var(--ink)}
+.bz-cinema--midnight .mine-bar-n{margin-left:auto;font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.bz-cinema--midnight .mine-bar-m{margin-top:4px;font-size:10.5px;color:var(--ink-3);letter-spacing:.01em;
+  font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  display:flex;align-items:center;gap:4px}
+.bz-cinema--midnight .mine-bar-m b{color:var(--gold);font-weight:600}
+.bz-cinema--midnight .mine-ring{flex:none;width:11px;height:11px;border-radius:50%;border:1.5px solid var(--line);
+  border-top-color:var(--gold);animation:cnMineSpin .8s linear infinite;display:inline-block}
+@keyframes cnMineSpin{to{transform:rotate(360deg)}}
+
+/* 勾选框 */
+.bz-cinema--midnight .mine-ck{flex:none;width:16px;height:16px;border-radius:4px;border:1px solid var(--line);
+  background:var(--panel);display:grid;place-items:center;position:relative;
+  transition:background var(--cn-m-fast) ease,border-color var(--cn-m-fast) ease}
+.bz-cinema--midnight .mine-ck svg{width:11px;height:11px;opacity:0;color:#161410}
+.bz-cinema--midnight .mine-ck.on,
+.bz-cinema--midnight .mine-ck.indet{background:var(--gold);border-color:var(--gold)}
+.bz-cinema--midnight .mine-ck.on svg{opacity:1}
+.bz-cinema--midnight .mine-ck.indet::after{content:"";width:8px;height:1.5px;background:#161410;border-radius:2px;position:absolute}
+.bz-cinema--midnight .mine-ck.indet svg{opacity:0}
+.bz-cinema--midnight .mine-ck.dis{background:var(--chip);border-color:var(--line);opacity:.4}
+
+/* 汇总列表（整块自由滚动，条不画） */
+.bz-cinema--midnight .mine-b{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:16px 22px 20px;
+  scrollbar-width:none}
+.bz-cinema--midnight .mine-g + .mine-g{margin-top:18px}
+.bz-cinema--midnight .mine-glab{display:flex;align-items:baseline;gap:8px;font-size:10.5px;letter-spacing:.26em;
+  color:var(--ink-3);padding:0 2px 7px}
+.bz-cinema--midnight .mine-glab .mine-gn{letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.bz-cinema--midnight .mine-glab .mine-gs{margin-left:auto;letter-spacing:.02em;color:var(--gold);font-variant-numeric:tabular-nums}
+.bz-cinema--midnight .mine-rows{display:grid;grid-template-columns:minmax(0,1fr);gap:2px}
+
+/* 行：片名左，其余右 */
+.bz-cinema--midnight .mine-row{display:flex;align-items:center;gap:12px;padding:8px 9px;border-radius:8px;min-width:0;
+  border:1px solid transparent;cursor:pointer;font-size:13px;color:var(--ink);animation:cnMineRow var(--cn-m-move) ease both}
+@keyframes cnMineRow{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+.bz-cinema--midnight .mine-row.sel{background:var(--chip);border-color:var(--line)}
+.bz-cinema--midnight .mine-nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
+.bz-cinema--midnight .mine-rt{flex:none;display:flex;align-items:center;gap:12px;justify-content:flex-end}
+.bz-cinema--midnight .mine-st{font-size:12px;letter-spacing:.05em;font-variant-numeric:tabular-nums;white-space:nowrap;
+  min-width:62px;text-align:right}
+.bz-cinema--midnight .mine-st i{font-style:normal;color:var(--ink-3)}
+.bz-cinema--midnight .mine-st i.is-on{color:var(--star)}
+.bz-cinema--midnight .mine-sc{width:30px;text-align:right;font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.bz-cinema--midnight .mine-dt{width:70px;text-align:right;font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.bz-cinema--midnight .mine-row.lib{color:var(--ink-3);cursor:default}
+
+/* 底栏 */
+.bz-cinema--midnight .mine-f{flex:none;display:flex;align-items:center;gap:10px;row-gap:8px;flex-wrap:wrap;padding:15px 22px;
+  border-top:1px solid var(--line);background:var(--panel)}
+.bz-cinema--midnight .mine-sum{flex:1 1 auto;min-width:0;font-size:12.5px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.bz-cinema--midnight .mine-sum b{color:var(--ink);font-weight:600}
+.bz-cinema--midnight .mine-sum .mine-mu{color:var(--ink-3)}
+.bz-cinema--midnight .mine-sum.mute{color:var(--ink-3)}
+.bz-cinema--midnight .mine-acts{margin-left:auto;display:flex;gap:9px}
+.bz-cinema--midnight .mine-btn{border-radius:9px;padding:9px 14px;font-size:12.5px;font-family:inherit;cursor:pointer;
+  letter-spacing:.04em;border:1px solid transparent}
+.bz-cinema--midnight .mine-btn.gold{background:var(--gold);color:#161410;border-color:var(--gold)}
+.bz-cinema--midnight .mine-btn.gold:disabled{opacity:.45;cursor:default;filter:none}
+.bz-cinema--midnight .mine-btn.ghost{background:none;border-color:var(--line);color:var(--ink-2)}
+.bz-cinema--midnight .mine-btn.link{background:none;border:0;color:var(--ink-3);padding:9px 4px}
+
+/* 确认层：只剩警告 */
+.bz-cinema--midnight .mine-cf{padding:4px 22px 22px}
+.bz-cinema--midnight .mine-warn{display:flex;gap:12px;padding:16px 18px;border:1px solid var(--line);
+  border-radius:11px;background:var(--chip)}
+.bz-cinema--midnight .mine-warn .mine-wic{flex:none;width:17px;height:17px;color:var(--gold);margin-top:2px}
+.bz-cinema--midnight .mine-warn .mine-wtx{font-size:13px;line-height:1.9;color:var(--ink-2)}
+.bz-cinema--midnight .mine-warn .mine-wtx b{color:var(--ink);font-weight:600}
+.bz-cinema--midnight .mine-warn .mine-hl{color:var(--gold);font-variant-numeric:tabular-nums;font-weight:600}
+
+/* 进度层 */
+.bz-cinema--midnight .mine-pg{padding:0 22px 12px;display:flex;flex-direction:column;gap:14px}
+.bz-cinema--midnight .mine-step{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--ink-2);margin-bottom:10px}
+.bz-cinema--midnight .mine-step:last-of-type{margin-bottom:0}
+.bz-cinema--midnight .mine-dot{flex:none;width:15px;height:15px;border-radius:50%;display:grid;place-items:center;
+  font-size:9.5px;border:1px solid var(--line);position:relative}
+.bz-cinema--midnight .mine-dot.ok{background:var(--gold);border-color:var(--gold);color:#161410}
+.bz-cinema--midnight .mine-dot.live{border-color:var(--gold);border-top-color:transparent;animation:cnMineSpin .8s linear infinite}
+.bz-cinema--midnight .mine-v{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--ink)}
+.bz-cinema--midnight .mine-track{height:3px;border-radius:2px;background:var(--line);overflow:hidden;position:relative}
+.bz-cinema--midnight .mine-track span{display:block;height:100%;width:0;border-radius:2px;transition:width var(--cn-m-base) ease;
+  background:linear-gradient(90deg,var(--gold),#f3cf87,var(--gold));background-size:220% 100%;
+  animation:cnMineSheen 1.8s linear infinite}
+.bz-cinema--midnight .mine-track.idle span{animation:none}
+@keyframes cnMineSheen{from{background-position:0 0}to{background-position:-220% 0}}
+.bz-cinema--midnight .mine-eta{margin-top:12px;font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+
+/* 五条流动窗口 */
+.bz-cinema--midnight .mine-stream{flex:none;margin:0 22px 18px;overflow:hidden}
+.bz-cinema--midnight .mine-stream .mine-rows{transition:transform var(--cn-m-move) var(--cn-e-move)}
+.bz-cinema--midnight .mine-stream .mine-row{height:34px;padding:0 9px;cursor:default;animation:none}
+.bz-cinema--midnight .mine-si{flex:none;width:16px;height:16px;display:grid;place-items:center}
+/* 完成态的勾选框比列表里小一号（这里是 16px 槽位，列表是整行 16px 勾选框）：
+   尺寸走样式而不是内联 width/height（AGENTS.md：域内禁内联视觉样式） */
+.bz-cinema--midnight .mine-si .mine-ck{width:15px;height:15px}
+.bz-cinema--midnight .mine-spin{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--line);
+  border-top-color:var(--gold);animation:cnMineSpin .8s linear infinite;display:block}
+.bz-cinema--midnight .mine-hollow{width:11px;height:11px;border-radius:50%;border:1px solid var(--line);display:block}
+.bz-cinema--midnight .mine-grp{width:48px;text-align:right;font-size:11.5px;color:var(--ink-3)}
+.bz-cinema--midnight .mine-pst{flex:none;width:60px;text-align:right;font-size:11.5px;color:var(--ink-3);letter-spacing:.04em}
+.bz-cinema--midnight .mine-pst.run{color:var(--gold)}
+.bz-cinema--midnight .mine-pst.ok{color:var(--ink-2)}
+/* miss = 队列处理完了但没拿到海报（豆瓣没图 / 被拦 / 条目被删）：算收尾，不报「完成」 */
+.bz-cinema--midnight .mine-pst.miss{color:var(--ink-3)}
+
+/* 触屏悬浮隔离（呈报#9 / F4）：:hover 一律包在 (hover: hover) 里，触屏不粘滞 */
+@media (hover: hover) {
+.bz-cinema--midnight .mine-x:hover{border-color:var(--line);color:var(--ink)}
+.bz-cinema--midnight .mine-bar-c:hover,
+.bz-cinema--midnight .mine-row:hover{background:var(--chip)}
+.bz-cinema--midnight .mine-row.lib:hover{background:none}
+.bz-cinema--midnight .mine-btn.gold:hover{filter:brightness(1.08)}
+.bz-cinema--midnight .mine-btn.ghost:hover{color:var(--ink);border-color:var(--ink-3)}
+.bz-cinema--midnight .mine-btn.link:hover{color:var(--ink-2)}
+}
 /* ==================== 游戏库域样式（src/gameshelf/styles.css）v3 ====================
    方向 = V1 海报墙落域（2026-09-17 用户点版）：门面 hero + 工具行 + 封面网格 + 数据统计面板
    + 全量详情弹窗。2026-09-18（issue 378）：头行退役，大海报顶到面板顶，常驻操作 = 右上角
