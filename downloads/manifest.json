@@ -2,20 +2,6 @@
   "version": 1,
   "docs": [
     {
-      "id": "changelog",
-      "name": "更新日志",
-      "file": "bz-changelog.html",
-      "sha256": "2622ea2bf3ded7a788de286828dc5ffa296b9975cfca2d4ffceaff136ec2543d",
-      "size": 13854
-    },
-    {
-      "id": "manual",
-      "name": "使用手册",
-      "file": "bz-manual.html",
-      "sha256": "cadef4b1d050194c4ee65a952e1efc0d69e36dba21d41ca8d69379fea4a5843c",
-      "size": 275139
-    },
-    {
       "id": "belongings-categories",
       "name": "归物分类表",
       "file": "belongings-categories.json",
@@ -49,8 +35,8 @@
       "name": "工具坞工具包",
       "file": "tools/dock-watch.tar.gz",
       "kind": "bundle",
-      "sha256": "43f5a0155fd3f327d9a18c85be973db2e876a990f6ffe6b40fd3de0e0af18c32",
-      "size": 49646
+      "sha256": "90703f8da75908116ea03acb1c27081108cfc187915f4555500d3ce2358e63b2",
+      "size": 49645
     },
     {
       "id": "tool-obsidian-face",
@@ -303,8 +289,6 @@
     "size": 32357
   },
   "rowOrder": [
-    "changelog",
-    "manual",
     "skins",
     "belongings-categories",
     "rss-catalog",
@@ -314,7 +298,7 @@
     "tool-obsidian-face"
   ],
   "release": {
-    "version": "1.39.1",
-    "tag": "v1.39.1"
+    "version": "1.39.2",
+    "tag": "v1.39.2"
   }
 }
